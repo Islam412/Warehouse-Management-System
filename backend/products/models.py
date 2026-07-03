@@ -59,3 +59,65 @@ class Unit(models.Model):
     def __str__(self):
         return self.name
 
+class Product(models.Model):
+    """المنتج الرئيسي"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    name = models.CharField(max_length=200, verbose_name="اسم المنتج")
+    name_ar = models.CharField(max_length=200, blank=True, null=True, verbose_name="اسم المنتج بالعربية")
+    description = models.TextField(blank=True, null=True, verbose_name="الوصف")
+    
+    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='products', 
+                                 verbose_name="الفئة")
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='products', 
+                              verbose_name="العلامة التجارية")
+    unit = models.ForeignKey(Unit, on_delete=models.PROTECT, related_name='products', 
+                             verbose_name="وحدة القياس")
+    
+    sku = models.CharField(max_length=50, unique=True, verbose_name="SKU")
+    barcode = models.CharField(max_length=50, blank=True, null=True, verbose_name="الباركود")
+    
+    purchase_price = models.DecimalField(max_digits=12, decimal_places=2, 
+                                         validators=[MinValueValidator(0)], 
+                                         verbose_name="سعر الشراء")
+    selling_price = models.DecimalField(max_digits=12, decimal_places=2, 
+                                        validators=[MinValueValidator(0)], 
+                                        verbose_name="سعر البيع")
+    wholesale_price = models.DecimalField(max_digits=12, decimal_places=2, 
+                                          validators=[MinValueValidator(0)], 
+                                          blank=True, null=True, 
+                                          verbose_name="سعر الجملة")
+    
+    size = models.CharField(max_length=50, blank=True, null=True, verbose_name="المقاس")
+    color = models.CharField(max_length=50, blank=True, null=True, verbose_name="اللون")
+    weight = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, 
+                                 verbose_name="الوزن")
+    
+    is_active = models.BooleanField(default=True, verbose_name="نشط")
+    is_featured = models.BooleanField(default=False, verbose_name="مميز")
+    has_stock = models.BooleanField(default=True, verbose_name="به مخزون")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, 
+                                   null=True, related_name='products_created')
+    
+    class Meta:
+        db_table = 'products'
+        verbose_name = "منتج"
+        verbose_name_plural = "المنتجات"
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name', 'sku', 'barcode']),
+            models.Index(fields=['category', 'brand']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} - {self.brand.name}"
+    
+    @property
+    def profit_margin(self):
+        if self.purchase_price > 0:
+            return ((self.selling_price - self.purchase_price) / self.purchase_price) * 100
+        return 0
+
