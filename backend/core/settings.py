@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-o8vw@wj!%3&4gj4bx0&bify#c%!l+t3u+$^knbux7%x957#xtn'
+SECRET_KEY = 'django-insecure-2uj@o2n@c$6_p2eao@k61j=jsv#cf@^krk#^yry&240&xy_-4@'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -31,7 +31,6 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
-    "*",
 ]
 
 
@@ -60,6 +59,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'drf_yasg',
 
+
     # next connect
     'corsheaders',
 ]
@@ -79,7 +79,6 @@ MIDDLEWARE = [
     # allouth
     'allauth.account.middleware.AccountMiddleware',
 ]
-
 
 ROOT_URLCONF = 'core.urls'
 
@@ -164,18 +163,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ------------------------
 # change user Configs
 # ------------------------
-AUTH_USER_MODEL = 'userauths.User'
+AUTH_USER_MODEL = 'accounts.User'
 
 AUTHENTICATION_BACKENDS = [
-    'userauths.backends.EmailBackend',  # Custom backend for email authentication
+    'accounts.backends.EmailBackend',  # Custom backend for email authentication
     'django.contrib.auth.backends.ModelBackend',  # Default backend
 ]
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 LOGIN_REDIRECT_URL = ''
-LOGIN_URL = 'userauths:sign-up'
-LOGOUT_REDIRECT_URL = "userauths:sign-up"
+LOGIN_URL = 'accounts:sign-up'
+LOGOUT_REDIRECT_URL = "accounts:sign-up"
 
 LOGIN_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
