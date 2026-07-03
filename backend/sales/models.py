@@ -94,3 +94,43 @@ class InvoiceItem(models.Model):
         super().save(*args, **kwargs)
         self.invoice.calculate_total()
 
+class Payment(models.Model):
+    """المدفوعات"""
+    PAYMENT_METHODS = (
+        ('cash', 'نقدي'),
+        ('card', 'بطاقة'),
+        ('bank_transfer', 'تحويل بنكي'),
+        ('cheque', 'شيك'),
+    )
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='cash')
+    reference = models.CharField(max_length=100, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='payments')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'payments'
+        verbose_name = "دفعة"
+        verbose_name_plural = "المدفوعات"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.invoice.invoice_number} - {self.amount}"
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # تحديث المدفوعات في الفاتورة
+        self.invoice.paid_amount = sum(p.amount for p in self.invoice.payments.all())
+        self.invoice.remaining_amount = self.invoice.total - self.invoice.paid_amount
+        if self.invoice.remaining_amount <= 0:
+            self.invoice.status = 'paid'
+        elif self.invoice.paid_amount > 0:
+            self.invoice.status = 'partially_paid'
+        self.invoice.save()
+
+
