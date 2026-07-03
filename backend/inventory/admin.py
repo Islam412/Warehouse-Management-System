@@ -6,11 +6,11 @@ from .models import Warehouse, Stock, StockMovement
 @admin.register(Warehouse)
 class WarehouseAdmin(admin.ModelAdmin):
     """إدارة المخازن"""
-    list_display = ['name', 'name_ar', 'location', 'manager', 'stocks_count', 'is_active']
+    list_display = ['name', 'name_ar', 'location', 'manager', 'is_active']
     list_filter = ['is_active', 'created_at']
     search_fields = ['name', 'name_ar', 'location']
     list_editable = ['is_active']
-    readonly_fields = ['id', 'created_at', 'updated_at', 'stocks_count']
+    readonly_fields = ['id', 'created_at', 'updated_at']
     ordering = ['name']
     
     fieldsets = (
@@ -24,26 +24,10 @@ class WarehouseAdmin(admin.ModelAdmin):
             'fields': ('is_active',)
         }),
         (_('معلومات النظام'), {
-            'fields': ('stocks_count', 'created_at', 'updated_at'),
+            'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
-    
-    def stocks_count(self, obj):
-        """عدد المنتجات في المخزن"""
-        count = obj.stocks.count()
-        url = f"/admin/inventory/stock/?warehouse__id__exact={obj.id}"
-        return format_html('<a href="{}">{} منتج</a>', url, count)
-    stocks_count.short_description = _('عدد المنتجات')
-
-class StockMovementInline(admin.TabularInline):
-    """عرض حركات المخزون داخل صفحة المخزون"""
-    model = StockMovement
-    extra = 0
-    fields = ['movement_type', 'quantity', 'previous_quantity', 'new_quantity', 'created_at']
-    readonly_fields = ['created_at']
-    ordering = ['-created_at']
-    max_num = 10
 
 @admin.register(Stock)
 class StockAdmin(admin.ModelAdmin):
@@ -52,8 +36,7 @@ class StockAdmin(admin.ModelAdmin):
                     'status_display', 'last_updated']
     list_filter = ['warehouse', 'product__category', 'product__brand']
     search_fields = ['product__name', 'product__sku', 'warehouse__name']
-    readonly_fields = ['id', 'last_updated', 'available_quantity', 'status_display']
-    inlines = [StockMovementInline]
+    readonly_fields = ['id', 'last_updated', 'available_quantity']
     ordering = ['-last_updated']
     
     fieldsets = (
@@ -63,9 +46,6 @@ class StockAdmin(admin.ModelAdmin):
         (_('الكميات'), {
             'fields': ('quantity', 'min_quantity', 'max_quantity', 'reserved_quantity', 
                       'available_quantity')
-        }),
-        (_('حالة المخزون'), {
-            'fields': ('status_display',)
         }),
         (_('معلومات النظام'), {
             'fields': ('last_updated', 'updated_by'),
