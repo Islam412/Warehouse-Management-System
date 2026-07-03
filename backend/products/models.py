@@ -121,3 +121,17 @@ class Product(models.Model):
             return ((self.selling_price - self.purchase_price) / self.purchase_price) * 100
         return 0
 
+class ProductImage(models.Model):
+    """صور المنتج"""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='products/')
+    is_primary = models.BooleanField(default=False, verbose_name="الصورة الرئيسية")
+    alt_text = models.CharField(max_length=200, blank=True, null=True, verbose_name="نص بديل")
+    order = models.PositiveIntegerField(default=0, verbose_name="الترتيب")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'product_images'
+        verbose_name = "صورة المنتج"
+        verbose_name_plural = "صور المنتج"
+        ordering = ['order', '-is_primary']
