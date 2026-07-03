@@ -46,3 +46,10 @@ class UpdateMyProfileAPIView(UpdateAPIView):
 
     def get_object(self):
         return Profile.objects.get(user=self.request.user)
+    
+class MyAccountAPIView(RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
