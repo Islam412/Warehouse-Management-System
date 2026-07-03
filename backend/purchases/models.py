@@ -53,3 +53,35 @@ class PurchaseOrder(models.Model):
         self.total = self.subtotal - self.discount + self.tax
         self.save()
 
+class PurchaseItem(models.Model):
+    """بنود أمر الشراء"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='purchase_items')
+    
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    received_quantity = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="الكمية المستلمة")
+    
+    class Meta:
+        db_table = 'purchase_items'
+        verbose_name = "بند شراء"
+        verbose_name_plural = "بنود الشراء"
+    
+    def __str__(self):
+        return f"{self.product.name} x {self.quantity}"
+    
+    def save(self, *args, **kwargs):
+        self.total = (self.quantity * self.unit_price) - self.discount + self.tax
+        super().save(*args, **kwargs)
+        self.order.calculate_total()
+    
+    @property
+    def remaining_quantity(self):
+        """الكمية المتبقية للاستلام"""
+        return self.quantity - self.received_quantity
