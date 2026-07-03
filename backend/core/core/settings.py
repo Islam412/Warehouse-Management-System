@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
+
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +28,11 @@ SECRET_KEY = 'django-insecure-o8vw@wj!%3&4gj4bx0&bify#c%!l+t3u+$^knbux7%x957#xtn
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "*",
+]
 
 
 # Application definition
@@ -58,6 +65,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # next connect
+    'corsheaders.middleware.CorsMiddleware',
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -65,14 +75,18 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # allouth
+    'allauth.account.middleware.AccountMiddleware',
 ]
+
 
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -146,3 +160,75 @@ MEDIA_ROOT=BASE_DIR / "media"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ------------------------
+# change user Configs
+# ------------------------
+AUTH_USER_MODEL = 'userauths.User'
+
+AUTHENTICATION_BACKENDS = [
+    'userauths.backends.EmailBackend',  # Custom backend for email authentication
+    'django.contrib.auth.backends.ModelBackend',  # Default backend
+]
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+LOGIN_REDIRECT_URL = ''
+LOGIN_URL = 'userauths:sign-up'
+LOGOUT_REDIRECT_URL = "userauths:sign-up"
+
+LOGIN_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+
+
+# ------------------------
+# REST Framework settings
+# ------------------------
+REST_FRAMEWORK = {
+    # Enable filtering in API
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
+
+    # Authentication classes for API
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # JWT auth
+        'rest_framework.authentication.SessionAuthentication',        # for Admin and browsable API
+        'rest_framework.authentication.BasicAuthentication',          # optional for testing
+    ),
+
+    # Default permission: only authenticated users can access
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',  # use AllowAny for public API
+    ),
+
+    # Pagination settings
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 30,
+}
+
+# ------------------------
+# JWT Settings
+# ------------------------
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),   # token expires in 60 minutes
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),      # refresh token expires in 1 day
+    'SLIDING_TOKEN_LIFETIME': timedelta(days=30),     # sliding token lifetime
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,  # take new refresh 
+    'BLACKLIST_AFTER_ROTATION': True, # put the tokken old at placklist
+}
+
+
+# ------------------------
+# connect next
+# ------------------------
+CORS_ALLOW_ALL_ORIGINS = False
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
