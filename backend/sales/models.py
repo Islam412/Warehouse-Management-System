@@ -68,3 +68,29 @@ class Invoice(models.Model):
         from django.utils import timezone
         return self.status != 'paid' and timezone.now().date() > self.due_date
 
+class InvoiceItem(models.Model):
+    """بنود الفاتورة"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='sales_items')
+    
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    class Meta:
+        db_table = 'invoice_items'
+        verbose_name = "بند فاتورة"
+        verbose_name_plural = "بنود الفاتورة"
+    
+    def __str__(self):
+        return f"{self.product.name} x {self.quantity}"
+    
+    def save(self, *args, **kwargs):
+        self.total = (self.quantity * self.unit_price) - self.discount + self.tax
+        super().save(*args, **kwargs)
+        self.invoice.calculate_total()
+
