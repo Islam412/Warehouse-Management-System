@@ -77,3 +77,41 @@ class Stock(models.Model):
         return self.max_quantity > 0 and self.quantity > self.max_quantity
 
 
+class StockMovement(models.Model):
+    """حركات المخزون - سجل كل حركة"""
+    MOVEMENT_TYPES = (
+        ('purchase', 'شراء'),
+        ('sale', 'بيع'),
+        ('return_sale', 'مرتجع بيع'),
+        ('return_purchase', 'مرتجع شراء'),
+        ('adjustment', 'تعديل جرد'),
+        ('damage', 'تالف'),
+        ('transfer', 'تحويل بين المخازن'),
+        ('opening', 'رصيد افتتاحي'),
+    )
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='movements')
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name='movements')
+    
+    movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES, verbose_name="نوع الحركة")
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="الكمية")
+    previous_quantity = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="الكمية السابقة")
+    new_quantity = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="الكمية الجديدة")
+    
+    reference_id = models.UUIDField(blank=True, null=True, verbose_name="المرجع")
+    reference_type = models.CharField(max_length=50, blank=True, null=True, verbose_name="نوع المرجع")
+    
+    notes = models.TextField(blank=True, null=True, verbose_name="ملاحظات")
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, 
+                                   null=True, related_name='stock_movements')
+    
+    class Meta:
+        db_table = 'stock_movements'
+        verbose_name = "حركة مخزون"
+        verbose_name_plural = "حركات المخزون"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.product.name} - {self.get_movement_type_display()} - {self.quantity}"
