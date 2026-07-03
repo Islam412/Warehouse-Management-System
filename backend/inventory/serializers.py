@@ -33,4 +33,18 @@ class StockSerializer(serializers.ModelSerializer):
                   'is_low_stock', 'is_over_stock', 'last_updated', 'updated_by']
         read_only_fields = ['id', 'last_updated']
 
-
+class StockMovementSerializer(serializers.ModelSerializer):
+    """Serializer لحركات المخزون"""
+    product_name = serializers.ReadOnlyField(source='product.name')
+    warehouse_name = serializers.ReadOnlyField(source='warehouse.name')
+    created_by_name = serializers.ReadOnlyField(source='created_by.username')
+    movement_type_display = serializers.ReadOnlyField(source='get_movement_type_display')
+    
+    class Meta:
+        model = StockMovement
+        fields = ['id', 'product', 'product_name', 'warehouse', 'warehouse_name',
+                  'movement_type', 'movement_type_display', 'quantity',
+                  'previous_quantity', 'new_quantity', 'reference_id',
+                  'reference_type', 'notes', 'created_at', 'created_by',
+                  'created_by_name']
+        read_only_fields = ['id', 'created_at']
