@@ -25,3 +25,37 @@ class User(AbstractUser):
         return str(self.username)
     
 
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    cover_images = models.ImageField(_('Cover Image'), upload_to='Images_Profile', null=True, blank=True, default='user.png')
+    address = models.TextField(_('Address'), max_length=300 , null=True, blank=True)
+    phone = models.CharField(_('Phone'), max_length=30, null=True, blank=True)
+    code = models.CharField(max_length=10, default=generate_code)
+    verified = models.BooleanField(_('Verified'), default=False)
+
+    @property
+    def full_name(self):
+        return f"{self.user.first_name} {self.user.last_name}" if self.user.first_name and self.user.last_name else self.user.username
+
+    @property
+    def email(self):
+        return self.user.email
+
+    @property
+    def username(self):
+        return self.user.username
+    
+
+@receiver(post_save, sender=User)
+# create user profile automatic
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+        
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()
+
+post_save.connect(create_user_profile ,sender=User)
+post_save.connect(save_user_profile ,sender=User)
