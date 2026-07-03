@@ -29,3 +29,9 @@ class UserCreateAPIView(CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(is_active=True)
+
+
+class ProfileListAPIView(ListAPIView):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializer
+    permission_classes = [IsAuthenticated]
