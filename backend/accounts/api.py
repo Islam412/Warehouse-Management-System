@@ -60,3 +60,50 @@ class MyProfileAPIView(RetrieveAPIView):
 
     def get_object(self):
         return Profile.objects.get(user=self.request.user)
+    
+
+
+class LoginAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        if not email or not password:
+            return Response(
+                {"error": "Please provide both email and password"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Invalid email or password"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not user.check_password(password):
+            return Response(
+                {"error": "Invalid email or password"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not user.is_active:
+            return Response(
+                {"error": "User account is disabled"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(user)
+        
+        user_serializer = UserSerializer(user)
+        
+        return Response({
+            'user': user_serializer.data,
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'message': 'Login successful'
+        }, status=status.HTTP_200_OK)
