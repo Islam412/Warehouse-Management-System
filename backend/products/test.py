@@ -148,6 +148,7 @@ class ProductAPITest(TestCase):
             password='testpass123'
         )
         
+        # الحصول على JWT Token
         response = self.client.post('/api/token/', {
             'email': 'test@example.com',
             'password': 'testpass123'
@@ -170,6 +171,39 @@ class ProductAPITest(TestCase):
             created_by=self.user
         )
     
+    def test_list_categories(self):
+        """اختبار جلب قائمة الفئات"""
+        response = self.client.get('/api/v1/products/api/categories/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    def test_create_category(self):
+        """اختبار إنشاء فئة جديدة"""
+        data = {'name': 'خلاطات', 'name_ar': 'خلاطات', 'description': 'جميع أنواع الخلاطات'}
+        response = self.client.post('/api/v1/products/api/categories/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    
+    def test_create_brand(self):
+        """اختبار إنشاء علامة تجارية جديدة"""
+        data = {'name': 'Grohe', 'name_ar': 'جروهي', 'description': 'شركة جروهي'}
+        response = self.client.post('/api/v1/products/api/brands/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    
+    def test_list_brands(self):
+        """اختبار جلب قائمة العلامات التجارية"""
+        response = self.client.get('/api/v1/products/api/brands/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    def test_create_unit(self):
+        """اختبار إنشاء وحدة قياس جديدة"""
+        data = {'name': 'كيلو', 'name_ar': 'كيلو', 'symbol': 'كجم'}
+        response = self.client.post('/api/v1/products/api/units/', data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    
+    def test_list_units(self):
+        """اختبار جلب قائمة وحدات القياس"""
+        response = self.client.get('/api/v1/products/api/units/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
     def test_create_product(self):
         """اختبار إنشاء منتج جديد"""
         data = {
@@ -181,27 +215,32 @@ class ProductAPITest(TestCase):
             'purchase_price': '100.00',
             'selling_price': '150.00'
         }
-        response = self.client.post('/api/v1/products/api/create/', data)
+        response = self.client.post('/api/v1/products/api/products/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
     
-    def test_get_products_list(self):
+    def test_list_products(self):
         """اختبار جلب قائمة المنتجات"""
-        response = self.client.get('/api/v1/products/api/')
+        response = self.client.get('/api/v1/products/api/products/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
     
     def test_get_product_detail(self):
         """اختبار جلب تفاصيل المنتج"""
-        response = self.client.get(f'/api/v1/products/api/{self.product.id}/')
+        response = self.client.get(f'/api/v1/products/api/products/{self.product.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], 'قلب حنفية')
     
     def test_update_product(self):
         """اختبار تحديث المنتج"""
         data = {'name': 'قلب حنفية محدث', 'selling_price': '90.00'}
-        response = self.client.patch(f'/api/v1/products/api/{self.product.id}/', data)
+        response = self.client.patch(f'/api/v1/products/api/products/{self.product.id}/', data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
     
     def test_delete_product(self):
         """اختبار حذف المنتج"""
-        response = self.client.delete(f'/api/v1/products/api/{self.product.id}/')
+        response = self.client.delete(f'/api/v1/products/api/products/{self.product.id}/')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+    
+    def test_search_products(self):
+        """اختبار البحث عن المنتجات"""
+        response = self.client.get('/api/v1/products/api/products/search/?q=قلب')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
