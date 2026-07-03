@@ -27,3 +27,53 @@ class Warehouse(models.Model):
     def __str__(self):
         return self.name
 
+
+class Stock(models.Model):
+    """المخزون الحالي"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='stocks')
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name='stocks')
+    
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, 
+                                   validators=[MinValueValidator(0)], 
+                                   default=0, verbose_name="الكمية الحالية")
+    min_quantity = models.DecimalField(max_digits=12, decimal_places=2, 
+                                       validators=[MinValueValidator(0)], 
+                                       default=0, verbose_name="الحد الأدنى للتنبيه")
+    max_quantity = models.DecimalField(max_digits=12, decimal_places=2, 
+                                       validators=[MinValueValidator(0)], 
+                                       default=0, verbose_name="الحد الأقصى")
+    
+    reserved_quantity = models.DecimalField(max_digits=12, decimal_places=2, 
+                                            validators=[MinValueValidator(0)], 
+                                            default=0, verbose_name="الكمية المحجوزة")
+    
+    last_updated = models.DateTimeField(auto_now=True, verbose_name="آخر تحديث")
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, 
+                                   null=True, related_name='stock_updates')
+    
+    class Meta:
+        db_table = 'stocks'
+        verbose_name = "مخزون"
+        verbose_name_plural = "المخزون"
+        unique_together = ['product', 'warehouse']
+    
+    def __str__(self):
+        return f"{self.product.name} - {self.warehouse.name}: {self.quantity}"
+    
+    @property
+    def available_quantity(self):
+        """الكمية المتاحة (الإجمالي - المحجوز)"""
+        return self.quantity - self.reserved_quantity
+    
+    @property
+    def is_low_stock(self):
+        """هل المخزون منخفض؟"""
+        return self.quantity <= self.min_quantity
+    
+    @property
+    def is_over_stock(self):
+        """هل المخزون زائد عن الحد؟"""
+        return self.max_quantity > 0 and self.quantity > self.max_quantity
+
+
