@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, F
+from decimal import Decimal
 from .models import Warehouse, Stock, StockMovement
 from .serializers import WarehouseSerializer, StockSerializer, StockMovementSerializer
 from products.models import Product
@@ -34,7 +35,7 @@ class StockViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def low_stock(self, request):
         """جلب المنتجات منخفضة المخزون"""
-        stocks = self.get_queryset().filter(quantity__lte=models.F('min_quantity'))
+        stocks = self.get_queryset().filter(quantity__lte=F('min_quantity'))
         serializer = self.get_serializer(stocks, many=True)
         return Response(serializer.data)
     
@@ -43,7 +44,7 @@ class StockViewSet(viewsets.ModelViewSet):
         """جلب المنتجات زائدة عن الحد"""
         stocks = self.get_queryset().filter(
             max_quantity__gt=0,
-            quantity__gte=models.F('max_quantity')
+            quantity__gte=F('max_quantity')
         )
         serializer = self.get_serializer(stocks, many=True)
         return Response(serializer.data)
@@ -81,10 +82,10 @@ class StockMovementViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            quantity = float(quantity)
-        except ValueError:
+            quantity = Decimal(str(quantity))
+        except (ValueError, TypeError):
             return Response(
-                {"error": "quantity must be a number"},
+                {"error": "quantity must be a valid number"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -101,7 +102,7 @@ class StockMovementViewSet(viewsets.ModelViewSet):
         stock, created = Stock.objects.get_or_create(
             product=product,
             warehouse=warehouse,
-            defaults={'quantity': 0}
+            defaults={'quantity': Decimal('0')}
         )
         
         previous_quantity = stock.quantity
