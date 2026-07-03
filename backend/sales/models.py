@@ -133,4 +133,24 @@ class Payment(models.Model):
             self.invoice.status = 'partially_paid'
         self.invoice.save()
 
-
+class Return(models.Model):
+    """مرتجعات المبيعات"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name='returns')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='returns')
+    
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    reason = models.TextField(blank=True, null=True)
+    
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='returns')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'returns'
+        verbose_name = "مرتجع"
+        verbose_name_plural = "المرتجعات"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.invoice.invoice_number} - {self.product.name}"
