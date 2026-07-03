@@ -43,3 +43,35 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = '__all__'
+
+
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
+
+    def validate(self, data):
+        email = data.get('email')
+        password = data.get('password')
+
+        if email and password:
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                msg = _('No user found with this email address.')
+                raise serializers.ValidationError(msg, code='authorization')
+            
+            if not user.check_password(password):
+                msg = _('Invalid password.')
+                raise serializers.ValidationError(msg, code='authorization')
+            
+            if not user.is_active:
+                msg = _('User account is disabled.')
+                raise serializers.ValidationError(msg, code='authorization')
+            
+            data['user'] = user
+            return data
+        else:
+            msg = _('Must include "email" and "password".')
+            raise serializers.ValidationError(msg, code='authorization')
