@@ -7,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken , OutstandingToken , Bl
 from rest_framework_simplejwt.exceptions import TokenError
 
 
-from userauths.serializers import UserSerializer , ProfileSerializer , LoginSerializer
+from accounts.serializers import UserSerializer , ProfileSerializer , LoginSerializer
 from .models import User , Profile 
 
 
