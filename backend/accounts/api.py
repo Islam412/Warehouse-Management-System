@@ -39,3 +39,10 @@ class ProfileListAPIView(ListAPIView):
 class ProfileCreateAPIView(CreateAPIView):
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
+
+class UpdateMyProfileAPIView(UpdateAPIView):
+    serializer_class = ProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return Profile.objects.get(user=self.request.user)
