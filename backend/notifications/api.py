@@ -11,6 +11,7 @@ from .serializers import (
     NotificationPreferenceSerializer, NotificationLogSerializer
 )
 
+
 class NotificationViewSet(viewsets.ModelViewSet):
     """ViewSet لإدارة الإشعارات"""
     queryset = Notification.objects.all().select_related('user')
@@ -55,6 +56,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(notifications, many=True)
         return Response(serializer.data)
 
+
 class NotificationPreferenceViewSet(viewsets.ModelViewSet):
     """ViewSet لإدارة تفضيلات الإشعارات"""
     queryset = NotificationPreference.objects.all().select_related('user')
@@ -87,15 +89,16 @@ class NotificationPreferenceViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        self.perform_update(serializer)
         return Response(serializer.data)
     
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        self.perform_update(serializer)
         return Response(serializer.data)
+
 
 class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet لعرض سجل الإشعارات"""

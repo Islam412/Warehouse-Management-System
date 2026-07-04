@@ -16,9 +16,12 @@ class NotificationCreateSerializer(serializers.ModelSerializer):
         model = Notification
         fields = ['title', 'message', 'notification_type', 'user', 'link',
                   'reference_type', 'reference_id', 'extra_data']
+        read_only_fields = ['user']  # user يقرأ تلقائياً من request
     
     def create(self, validated_data):
-        validated_data['created_by'] = self.context['request'].user
+        # إذا لم يتم إرسال user، نستخدم request.user
+        if 'user' not in validated_data:
+            validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
 
 class NotificationPreferenceSerializer(serializers.ModelSerializer):
