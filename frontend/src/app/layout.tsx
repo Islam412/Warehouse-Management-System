@@ -1,13 +1,19 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Cairo } from 'next/font/google';
+import { Providers } from './providers';
 import './globals.css';
-import { Providers } from '@/components/providers/Providers';
 
-const inter = Inter({ subsets: ['latin'] });
+const cairo = Cairo({
+  subsets: ['arabic', 'latin'],
+  weight: ['300', '400', '500', '600', '700'],
+});
 
 export const metadata: Metadata = {
-  title: 'نظام إدارة المتجر',
-  description: 'نظام إدارة المتجر - Duka POS',
+  title: 'نظام إدارة المتجر - Duka',
+  description: 'نظام إدارة متجر متكامل مع Next.js و Django',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
@@ -17,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={inter.className}>
+      <body className={cairo.className}>
         <Providers>{children}</Providers>
       </body>
     </html>
