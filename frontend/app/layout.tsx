@@ -3,6 +3,7 @@ import { Cairo } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "sonner";
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -31,6 +32,7 @@ export default function RootLayout({
         <Providers>
           <TooltipProvider delayDuration={0}>
             {children}
+            <Toaster position="top-center" richColors />
           </TooltipProvider>
         </Providers>
       </body>
