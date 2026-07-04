@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useProducts, useDeleteProduct } from '@/hooks/useProducts';
+import { useProducts } from '@/hooks/useProducts';
 import { ProductForm } from '@/components/forms/ProductForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -48,13 +49,12 @@ export default function ProductsPage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // جلب البيانات
   const { data: productsData, isLoading, error, refetch } = useProducts({ search });
-  const deleteProduct = useDeleteProduct();
 
   // التأكد من أن products هي مصفوفة
   const products = Array.isArray(productsData) ? productsData : 
@@ -62,27 +62,63 @@ export default function ProductsPage() {
                    productsData?.data ? (Array.isArray(productsData.data) ? productsData.data : []) :
                    [];
 
-  const handleEdit = (product: any) => {
-    setSelectedProduct(product);
-    setIsEditDialogOpen(true);
-  };
+  // دالة لتحديث حالة المنتج (نشط/غير نشط)
+  const handleToggleActive = async (product: any) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/products/api/products/${product.id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+        body: JSON.stringify({ is_active: !product.is_active }),
+      });
 
-  const handleDelete = (product: any) => {
-    setSelectedProduct(product);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (selectedProduct) {
-      try {
-        await deleteProduct.mutateAsync(selectedProduct.id);
-        setIsDeleteDialogOpen(false);
-        setSelectedProduct(null);
+      if (response.ok) {
+        toast.success(`تم ${!product.is_active ? 'تفعيل' : 'إلغاء تفعيل'} المنتج بنجاح`);
         refetch();
-      } catch (error) {
-        toast.error('حدث خطأ في حذف المنتج');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData?.detail || 'حدث خطأ في تحديث حالة المنتج');
       }
+    } catch (error) {
+      toast.error('حدث خطأ في الاتصال بالخادم');
     }
+  };
+
+  // دالة لحذف المنتج
+  const handleDelete = async () => {
+    if (!productToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/products/api/products/${productToDelete.id}/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+      });
+
+      if (response.ok) {
+        toast.success('تم حذف المنتج بنجاح');
+        setDeleteDialogOpen(false);
+        setProductToDelete(null);
+        refetch();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData?.detail || 'حدث خطأ في حذف المنتج');
+      }
+    } catch (error) {
+      toast.error('حدث خطأ في الاتصال بالخادم');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // فتح نافذة تأكيد الحذف
+  const openDeleteDialog = (product: any) => {
+    setProductToDelete(product);
+    setDeleteDialogOpen(true);
   };
 
   if (isLoading) {
@@ -98,6 +134,9 @@ export default function ProductsPage() {
       <div className="text-center py-12">
         <h3 className="text-lg font-semibold text-red-600">حدث خطأ في تحميل المنتجات</h3>
         <p className="text-gray-500">يرجى المحاولة مرة أخرى</p>
+        <Button onClick={() => refetch()} className="mt-4">
+          إعادة المحاولة
+        </Button>
       </div>
     );
   }
@@ -166,14 +205,16 @@ export default function ProductsPage() {
                 <TableHead>الفئة</TableHead>
                 <TableHead>العلامة</TableHead>
                 <TableHead>سعر البيع</TableHead>
-                <TableHead>الحالة</TableHead>
+                <TableHead>نشط</TableHead>
+                <TableHead>مميز</TableHead>
+                <TableHead>المخزون</TableHead>
                 <TableHead className="text-left">الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {!products || products.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                     لا توجد منتجات
                   </TableCell>
                 </TableRow>
@@ -192,8 +233,19 @@ export default function ProductsPage() {
                     <TableCell>{product.brand_name || product.brand?.name || '-'}</TableCell>
                     <TableCell>{product.selling_price || 0} ج.م</TableCell>
                     <TableCell>
-                      <Badge variant={product.is_active !== false ? 'default' : 'destructive'}>
-                        {product.is_active !== false ? 'نشط' : 'غير نشط'}
+                      <Switch
+                        checked={product.is_active !== false}
+                        onCheckedChange={() => handleToggleActive(product)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.is_featured ? 'default' : 'secondary'}>
+                        {product.is_featured ? 'مميز' : 'عادي'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.has_stock !== false ? 'default' : 'destructive'}>
+                        {product.has_stock !== false ? 'متوفر' : 'نفد'}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -201,16 +253,16 @@ export default function ProductsPage() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                          onClick={() => handleEdit(product)}
+                          className="text-blue-500 hover:text-blue-600"
+                          onClick={() => toast.info('جاري تطوير ميزة التعديل...')}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                          onClick={() => handleDelete(product)}
+                          className="text-red-500 hover:text-red-600"
+                          onClick={() => openDeleteDialog(product)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -224,44 +276,36 @@ export default function ProductsPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog تعديل المنتج */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>تعديل المنتج</DialogTitle>
-            <DialogDescription>
-              تحديث بيانات المنتج
-            </DialogDescription>
-          </DialogHeader>
-          {selectedProduct && (
-            <ProductForm 
-              initialData={selectedProduct}
-              isEditing={true}
-              onSuccess={() => {
-                setIsEditDialogOpen(false);
-                setSelectedProduct(null);
-                refetch();
-              }} 
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* AlertDialog تأكيد الحذف */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      {/* Alert Dialog للتأكيد على الحذف */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>هل أنت متأكد من حذف هذا المنتج؟</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedProduct && (
-                <>سيتم حذف المنتج &quot;{selectedProduct.name}&quot; بشكل دائم. لا يمكن التراجع عن هذا الإجراء.</>
+              {productToDelete && (
+                <>
+                  <p><strong>المنتج:</strong> {productToDelete.name}</p>
+                  <p><strong>SKU:</strong> {productToDelete.sku}</p>
+                  <p className="mt-2 text-red-500">⚠️ هذا الإجراء لا يمكن التراجع عنه</p>
+                </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">
-              حذف
+            <AlertDialogCancel disabled={isDeleting}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  جاري الحذف...
+                </>
+              ) : (
+                'نعم، احذف المنتج'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
