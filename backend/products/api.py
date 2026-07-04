@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+from django.utils import timezone
 from .models import Category, Brand, Unit, Product, ProductImage
 from .serializers import (
     CategorySerializer, BrandSerializer, UnitSerializer,
@@ -44,7 +45,7 @@ class UnitViewSet(viewsets.ModelViewSet):
 
 class ProductViewSet(viewsets.ModelViewSet):
     """ViewSet لإدارة المنتجات"""
-    queryset = Product.objects.all().select_related('category', 'brand', 'unit', 'created_by')
+    queryset = Product.objects.filter(is_deleted=False).select_related('category', 'brand', 'unit', 'created_by')
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -62,6 +63,14 @@ class ProductViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
     
+    def destroy(self, request, *args, **kwargs):
+        """Soft Delete - بدلاً من الحذف الفعلي"""
+        instance = self.get_object()
+        instance.is_deleted = True
+        instance.deleted_at = timezone.now()
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def search(self, request):
         """البحث المتقدم في المنتجات"""
@@ -71,7 +80,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         min_price = request.query_params.get('min_price')
         max_price = request.query_params.get('max_price')
         
-        products = Product.objects.all()
+        products = Product.objects.filter(is_deleted=False)
         
         if query:
             products = products.filter(

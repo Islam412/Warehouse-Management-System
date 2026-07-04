@@ -114,35 +114,24 @@ class ProductImageInline(admin.TabularInline):
 class ProductAdmin(admin.ModelAdmin):
     """إدارة المنتجات - Admin احترافي"""
     
-    # عرض البيانات في القائمة - إضافة has_stock إلى list_display
     list_display = [
         'name', 'sku', 'brand', 'category', 
         'selling_price_display', 'profit_margin_display', 
         'is_active', 'has_stock', 'created_at'
     ]
     
-    # فلاتر البحث
     list_filter = [
         'is_active', 'has_stock', 'brand', 'category', 'unit',
         'created_at', 'created_by'
     ]
     
-    # حقول البحث
     search_fields = ['name', 'name_ar', 'sku', 'barcode', 'description']
-    
-    # حقول قابلة للتعديل مباشرة - إزالة has_stock من list_editable
     list_editable = ['is_active']
-    
-    # ترتيب افتراضي
+    readonly_fields = ['id', 'created_at', 'updated_at', 'created_by', 'profit_margin']
     ordering = ['-created_at', 'name']
     
-    # حقول للقراءة فقط
-    readonly_fields = ['id', 'created_at', 'updated_at', 'created_by', 'profit_margin']
-    
-    # عرض الصور داخل الـ inline
     inlines = [ProductImageInline]
     
-    # تجميع الحقول
     fieldsets = (
         (_('معلومات أساسية'), {
             'fields': ('id', 'name', 'name_ar', 'description', 'category', 'brand', 'unit')
@@ -168,62 +157,69 @@ class ProductAdmin(admin.ModelAdmin):
         }),
     )
     
-    # إجراءات مخصصة
     actions = ['make_active', 'make_inactive', 'mark_featured', 'unmark_featured']
     
     def get_queryset(self, request):
-        """تحسين الأداء باستخدام select_related"""
         return super().get_queryset(request).select_related(
             'brand', 'category', 'unit', 'created_by'
         )
     
     def save_model(self, request, obj, form, change):
-        """تعيين المستخدم الذي أنشأ المنتج"""
         if not change:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
     
-    # ========== دوال عرض مخصصة ==========
+    # ========== دوال عرض مخصصة - تم إصلاحها ==========
     
     def selling_price_display(self, obj):
         """عرض سعر البيع بشكل منسق"""
-        return format_html('<span style="font-weight: bold; color: #28a745;">{:.2f} جنيه</span>', obj.selling_price)
+        try:
+            price = float(obj.selling_price) if obj.selling_price else 0
+            return format_html(
+                '<span style="font-weight: bold; color: #28a745;">{:.2f} جنيه</span>',
+                price
+            )
+        except (ValueError, TypeError):
+            return format_html(
+                '<span style="font-weight: bold; color: #28a745;">0.00 جنيه</span>'
+            )
     selling_price_display.short_description = _('سعر البيع')
     selling_price_display.admin_order_field = 'selling_price'
     
     def profit_margin_display(self, obj):
         """عرض هامش الربح بشكل منسق"""
-        margin = obj.profit_margin
-        color = '#28a745' if margin > 20 else '#ffc107' if margin > 10 else '#dc3545'
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
-            color, margin
-        )
+        try:
+            margin = float(obj.profit_margin) if obj.profit_margin else 0
+            color = '#28a745' if margin > 20 else '#ffc107' if margin > 10 else '#dc3545'
+            return format_html(
+                '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
+                color, margin
+            )
+        except (ValueError, TypeError):
+            return format_html(
+                '<span style="color: #6c757d; font-weight: bold;">0.0%</span>'
+            )
     profit_margin_display.short_description = _('هامش الربح')
     profit_margin_display.admin_order_field = 'profit_margin'
     
     # ========== إجراءات مخصصة ==========
     
     def make_active(self, request, queryset):
-        """تفعيل المنتجات المحددة"""
         updated = queryset.update(is_active=True)
         self.message_user(request, f'تم تفعيل {updated} منتج(منتجات) بنجاح.')
     make_active.short_description = _('تفعيل المنتجات المحددة')
     
     def make_inactive(self, request, queryset):
-        """إلغاء تفعيل المنتجات المحددة"""
         updated = queryset.update(is_active=False)
         self.message_user(request, f'تم إلغاء تفعيل {updated} منتج(منتجات) بنجاح.')
     make_inactive.short_description = _('إلغاء تفعيل المنتجات المحددة')
     
     def mark_featured(self, request, queryset):
-        """تمييز المنتجات المحددة"""
         updated = queryset.update(is_featured=True)
         self.message_user(request, f'تم تمييز {updated} منتج(منتجات) كمميزة.')
     mark_featured.short_description = _('تمييز المنتجات كمميزة')
     
     def unmark_featured(self, request, queryset):
-        """إلغاء تمييز المنتجات المحددة"""
         updated = queryset.update(is_featured=False)
         self.message_user(request, f'تم إلغاء تمييز {updated} منتج(منتجات).')
     unmark_featured.short_description = _('إلغاء تمييز المنتجات')
@@ -254,7 +250,6 @@ class ProductImageAdmin(admin.ModelAdmin):
     )
     
     def image_preview(self, obj):
-        """معاينة الصورة"""
         if obj.image:
             return format_html(
                 '<img src="{}" width="80" height="80" style="border-radius: 5px; object-fit: cover;" />',

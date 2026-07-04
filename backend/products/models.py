@@ -1,7 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
-
 import uuid
 
 class Category(models.Model):
@@ -96,6 +95,10 @@ class Product(models.Model):
     is_active = models.BooleanField(default=True, verbose_name="نشط")
     is_featured = models.BooleanField(default=False, verbose_name="مميز")
     has_stock = models.BooleanField(default=True, verbose_name="به مخزون")
+    
+    # Soft Delete - بدلاً من الحذف الفعلي
+    is_deleted = models.BooleanField(default=False, verbose_name="محذوف")
+    deleted_at = models.DateTimeField(blank=True, null=True, verbose_name="تاريخ الحذف")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
