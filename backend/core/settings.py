@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'notifications',
     'reports',
     'settings',
+    'dashboard',
 
     # Third party
     'rest_framework',
