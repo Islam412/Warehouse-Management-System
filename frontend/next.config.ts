@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  
+  // إعدادات الصور - الطريقة الصحيحة
   images: {
-    domains: ['localhost', '127.0.0.1'],
     remotePatterns: [
       {
         protocol: 'http',
@@ -11,14 +12,17 @@ const nextConfig: NextConfig = {
         port: '8000',
         pathname: '/media/**',
       },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        port: '8000',
+        pathname: '/media/**',
+      },
     ],
   },
-  // دعم RTL
-  i18n: {
-    locales: ['ar', 'en'],
-    defaultLocale: 'ar',
-    localeDetection: true,
-  },
+  
+  // إزالة i18n من هنا - سنستخدم middleware بدلاً من ذلك
+  // i18n تم إزالته لأنه غير مدعوم في App Router
 };
 
 export default nextConfig;
