@@ -1,22 +1,31 @@
-"use client";
+'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-  ShoppingCart, 
-  Users, 
-  Package, 
+import {
+  ShoppingCart,
+  Users,
+  Package,
   AlertTriangle,
+  DollarSign,
   TrendingUp,
   TrendingDown,
-  DollarSign,
-  Calendar
+  RefreshCw,
 } from 'lucide-react';
+import { useDashboardSummary, useSalesChart } from '@/hooks/useDashboard';
+import { StatsCard } from '@/components/dashboard/StatsCard';
+import { SalesChart } from '@/components/dashboard/SalesChart';
+import { RecentActivity } from '@/components/dashboard/RecentActivity';
+import { StockAlerts } from '@/components/dashboard/StockAlerts';
+import { TopProducts } from '@/components/dashboard/TopProducts';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year'>('month');
 
+  // التحقق من المصادقة
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -24,46 +33,62 @@ export default function DashboardPage() {
     }
   }, [router]);
 
-  // بيانات وهمية - سيتم استبدالها بـ API لاحقاً
-  const stats = [
-    { 
-      title: 'إجمالي المبيعات', 
-      value: '45,230 ج.م', 
-      change: '+12.5%', 
-      icon: ShoppingCart,
-      color: 'from-blue-500 to-blue-600',
-      bg: 'bg-blue-50 dark:bg-blue-900/20'
-    },
-    { 
-      title: 'عدد العملاء', 
-      value: '1,284', 
-      change: '+8.2%', 
-      icon: Users,
-      color: 'from-emerald-500 to-emerald-600',
-      bg: 'bg-emerald-50 dark:bg-emerald-900/20'
-    },
-    { 
-      title: 'المنتجات', 
-      value: '356', 
-      change: '+3.1%', 
-      icon: Package,
-      color: 'from-purple-500 to-purple-600',
-      bg: 'bg-purple-50 dark:bg-purple-900/20'
-    },
-    { 
-      title: 'مخزون منخفض', 
-      value: '12', 
-      change: '-2', 
-      icon: AlertTriangle,
-      color: 'from-rose-500 to-rose-600',
-      bg: 'bg-rose-50 dark:bg-rose-900/20'
-    },
-  ];
+  // جلب بيانات Dashboard
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+    refetch: refetchSummary,
+  } = useDashboardSummary();
 
-  const recentSales = [
-    { id: 1, customer: 'أحمد محمد', amount: '1,250 ج.م', status: 'مكتمل', date: '2026-07-04' },
-    { id: 2, customer: 'سارة علي', amount: '850 ج.م', status: 'معلق', date: '2026-07-04' },
-    { id: 3, customer: 'محمد حسن', amount: '2,100 ج.م', status: 'مكتمل', date: '2026-07-03' },
+  const {
+    data: chartData,
+    isLoading: chartLoading,
+    refetch: refetchChart,
+  } = useSalesChart(period);
+
+  if (summaryError) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">
+            حدث خطأ في تحميل البيانات
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            يرجى التحقق من الاتصال بالخادم والمحاولة مرة أخرى
+          </p>
+          <Button onClick={() => refetchSummary()} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            إعادة المحاولة
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // تحويل البيانات إلى نشاطات حديثة
+  const recentActivities = [
+    ...(summary?.overdue?.invoices?.slice(0, 3).map((inv: any) => ({
+      id: inv.id,
+      type: 'sale' as const,
+      title: `فاتورة متأخرة: ${inv.invoice_number}`,
+      description: `العميل: ${inv.customer}`,
+      amount: inv.remaining,
+      time: inv.due_date,
+      status: 'pending' as const,
+    })) || []),
+    ...(summary?.returns?.month?.count > 0 ? [{
+      id: 'return-1',
+      type: 'return' as const,
+      title: 'مرتجعات هذا الشهر',
+      description: `${summary.returns.month.count} مرتجع بقيمة ${summary.returns.month.amount} ج.م`,
+      amount: summary.returns.month.amount,
+      time: new Date().toISOString(),
+      status: 'completed' as const,
+    }] : []),
   ];
 
   return (
@@ -75,110 +100,145 @@ export default function DashboardPage() {
             لوحة التحكم
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            مرحباً بك في نظام DUKA - نظرة عامة على أداء متجرك
+            نظرة عامة على أداء متجرك
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            {new Date().toLocaleDateString('ar-EG', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              refetchSummary();
+              refetchChart();
+            }}
+            className="gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            تحديث
+          </Button>
         </div>
       </div>
 
       {/* بطاقات الإحصائيات */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <motion.div
-            key={stat.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md transition-all p-6 border border-gray-100 dark:border-gray-700"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{stat.title}</p>
-                <p className="text-2xl font-bold text-gray-800 dark:text-white mt-1">{stat.value}</p>
-                <p className={`text-xs mt-2 flex items-center gap-1 ${
-                  stat.change.startsWith('+') ? 'text-emerald-600' : 'text-rose-600'
-                }`}>
-                  {stat.change.startsWith('+') ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                  {stat.change}
-                </p>
-              </div>
-              <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color} text-white shadow-lg shadow-${stat.color.split(' ')[1]}/30`}>
-                <stat.icon className="w-5 h-5" />
-              </div>
-            </div>
-          </motion.div>
-        ))}
+        <StatsCard
+          title="إجمالي المبيعات"
+          value={summary?.sales?.month?.total || 0}
+          icon={ShoppingCart}
+          color="from-blue-500 to-blue-600"
+          bgColor="bg-blue-50 dark:bg-blue-900/20"
+          change={summary?.sales?.month_change}
+          currency
+          loading={summaryLoading}
+        />
+        <StatsCard
+          title="المشتريات"
+          value={summary?.purchases?.month?.total || 0}
+          icon={Package}
+          color="from-emerald-500 to-emerald-600"
+          bgColor="bg-emerald-50 dark:bg-emerald-900/20"
+          change={summary?.purchases?.month_change}
+          currency
+          loading={summaryLoading}
+        />
+        <StatsCard
+          title="العملاء"
+          value={summary?.customers?.total || 0}
+          icon={Users}
+          color="from-purple-500 to-purple-600"
+          bgColor="bg-purple-50 dark:bg-purple-900/20"
+          loading={summaryLoading}
+        />
+        <StatsCard
+          title="صافي الربح"
+          value={summary?.finance?.month?.profit || 0}
+          icon={DollarSign}
+          color="from-amber-500 to-amber-600"
+          bgColor="bg-amber-50 dark:bg-amber-900/20"
+          currency
+          loading={summaryLoading}
+        />
       </div>
 
-      {/* المخططات والجداول */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* المبيعات الأخيرة */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800 dark:text-white">آخر المبيعات</h3>
-            <a href="#" className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 transition-colors">
-              عرض الكل →
-            </a>
-          </div>
-          <div className="space-y-3">
-            {recentSales.map((sale) => (
-              <div key={sale.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                <div>
-                  <p className="font-medium text-gray-800 dark:text-white">{sale.customer}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{sale.date}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-semibold text-gray-800 dark:text-white">{sale.amount}</span>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    sale.status === 'مكتمل' 
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                      : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                  }`}>
-                    {sale.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+      {/* بطاقات إضافية */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatsCard
+          title="الفواتير المتأخرة"
+          value={summary?.overdue?.count || 0}
+          icon={AlertTriangle}
+          color="from-rose-500 to-rose-600"
+          bgColor="bg-rose-50 dark:bg-rose-900/20"
+          loading={summaryLoading}
+        />
+        <StatsCard
+          title="المنتجات منخفضة المخزون"
+          value={summary?.inventory?.low_stock || 0}
+          icon={Package}
+          color="from-orange-500 to-orange-600"
+          bgColor="bg-orange-50 dark:bg-orange-900/20"
+          loading={summaryLoading}
+        />
+        <StatsCard
+          title="قيمة المخزون"
+          value={summary?.inventory?.total_value || 0}
+          icon={TrendingUp}
+          color="from-teal-500 to-teal-600"
+          bgColor="bg-teal-50 dark:bg-teal-900/20"
+          currency
+          loading={summaryLoading}
+        />
+        <StatsCard
+          title="المرتجعات"
+          value={summary?.returns?.month?.count || 0}
+          icon={TrendingDown}
+          color="from-red-500 to-red-600"
+          bgColor="bg-red-50 dark:bg-red-900/20"
+          loading={summaryLoading}
+        />
+      </div>
 
-        {/* نشاط سريع */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6"
-        >
-          <h3 className="font-semibold text-gray-800 dark:text-white mb-4">نشاط سريع</h3>
-          <div className="space-y-3">
-            <button className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl text-sm font-medium transition-all shadow-sm shadow-blue-500/20">
-              + فاتورة جديدة
-            </button>
-            <button className="w-full py-2.5 px-4 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-xl text-sm font-medium transition-colors border border-emerald-200 dark:border-emerald-800">
-              + منتج جديد
-            </button>
-            <button className="w-full py-2.5 px-4 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-xl text-sm font-medium transition-colors border border-purple-200 dark:border-purple-800">
-              + عميل جديد
-            </button>
-            <button className="w-full py-2.5 px-4 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-xl text-sm font-medium transition-colors border border-rose-200 dark:border-rose-800">
-              تقرير جديد
-            </button>
-          </div>
-        </motion.div>
+      {/* الرسم البياني والتنبيهات */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="md:col-span-4 lg:col-span-5">
+          <SalesChart
+            data={chartData?.labels?.map((label: string, index: number) => ({
+              date: label,
+              sales: chartData.sales[index] || 0,
+            })) || []}
+            period={period}
+            onPeriodChange={setPeriod}
+            loading={chartLoading}
+          />
+        </div>
+        <div className="md:col-span-3 lg:col-span-2">
+          <StockAlerts
+            lowStock={summary?.inventory?.low_stock ? [{
+              product_id: '1',
+              product_name: 'منتج منخفض',
+              product_sku: 'SKU-001',
+              quantity: 3,
+              min_quantity: 10,
+            }] : []}
+            totalProducts={summary?.inventory?.total_products || 0}
+            loading={summaryLoading}
+          />
+        </div>
+      </div>
+
+      {/* أفضل المنتجات والنشاطات */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="lg:col-span-4">
+          <TopProducts
+            products={summary?.products?.top || []}
+            loading={summaryLoading}
+          />
+        </div>
+        <div className="lg:col-span-3">
+          <RecentActivity
+            activities={recentActivities}
+            loading={summaryLoading}
+          />
+        </div>
       </div>
     </div>
   );
