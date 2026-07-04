@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -48,11 +48,23 @@ export default function ForgotPasswordPage() {
     }
 
     try {
-      // محاكاة النجاح
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setSuccess(true);
+      // استدعاء API لإرسال رابط إعادة التعيين
+      const response = await fetch('http://localhost:8000/api/v1/auth/password/reset/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        setSuccess(true);
+      } else {
+        const data = await response.json();
+        setError(data.detail || 'حدث خطأ، يرجى المحاولة مرة أخرى');
+      }
     } catch (err) {
-      setError('حدث خطأ في الاتصال بالخادم');
+      setError('حدث خطأ في الاتصال بالخادم. تأكد من تشغيل Backend.');
     } finally {
       setIsLoading(false);
     }

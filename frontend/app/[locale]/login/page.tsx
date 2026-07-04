@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,7 @@ import {
   TrendingUp,
   CheckCircle2,
 } from 'lucide-react';
+import { setTokens } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,7 +27,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     setIsVisible(true);
-  }, []);
+    // التحقق من وجود توكن
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      router.push('/dashboard');
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,14 +49,14 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('access_token', data.access);
-        localStorage.setItem('refresh_token', data.refresh);
+        // تخزين التوكن في localStorage و Cookies
+        setTokens(data.access, data.refresh);
         router.push('/dashboard');
       } else {
-        setError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+        setError(data.detail || 'البريد الإلكتروني أو كلمة المرور غير صحيحة');
       }
     } catch (err) {
-      setError('حدث خطأ في الاتصال بالخادم');
+      setError('حدث خطأ في الاتصال بالخادم. تأكد من تشغيل Backend.');
     } finally {
       setLoading(false);
     }
@@ -77,6 +83,7 @@ export default function LoginPage() {
         transition={{ duration: 0.6 }}
         className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 relative z-10"
       >
+        {/* الجانب الأيمن - معلومات النظام */}
         <motion.div
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: isVisible ? 1 : 0, x: isVisible ? 0 : -30 }}
@@ -119,6 +126,7 @@ export default function LoginPage() {
           </div>
         </motion.div>
 
+        {/* الجانب الأيسر - نموذج تسجيل الدخول */}
         <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: isVisible ? 1 : 0, x: isVisible ? 0 : 30 }}

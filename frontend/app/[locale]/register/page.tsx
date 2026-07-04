@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -15,7 +15,6 @@ import {
   Users,
   TrendingUp,
   CheckCircle2,
-  ArrowLeft,
   AlertCircle,
   Check,
   X,
@@ -107,14 +106,22 @@ export default function RegisterPage() {
           router.push('/login');
         }, 2000);
       } else {
-        const errorMessages = Object.values(data).flat();
+        // معالجة أخطاء Django
+        const errorMessages: string[] = [];
+        Object.entries(data).forEach(([key, value]) => {
+          if (Array.isArray(value)) {
+            errorMessages.push(`${key}: ${value.join(', ')}`);
+          } else if (typeof value === 'string') {
+            errorMessages.push(value);
+          }
+        });
         setErrors({
-          form: errorMessages.join(', ') || 'حدث خطأ في إنشاء الحساب',
+          form: errorMessages.join(' | ') || 'حدث خطأ في إنشاء الحساب',
         });
       }
     } catch (err) {
       setErrors({
-        form: 'حدث خطأ في الاتصال بالخادم',
+        form: 'حدث خطأ في الاتصال بالخادم. تأكد من تشغيل Backend.',
       });
     } finally {
       setIsLoading(false);
