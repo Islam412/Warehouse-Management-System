@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useProducts } from '@/hooks/useProducts';
+import { useProducts, useDeleteProduct } from '@/hooks/useProducts';
 import { ProductForm } from '@/components/forms/ProductForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,23 +29,61 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 export default function ProductsPage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   // جلب البيانات
   const { data: productsData, isLoading, error, refetch } = useProducts({ search });
+  const deleteProduct = useDeleteProduct();
 
   // التأكد من أن products هي مصفوفة
   const products = Array.isArray(productsData) ? productsData : 
                    productsData?.results ? productsData.results : 
                    productsData?.data ? (Array.isArray(productsData.data) ? productsData.data : []) :
                    [];
+
+  const handleEdit = (product: any) => {
+    setSelectedProduct(product);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDelete = (product: any) => {
+    setSelectedProduct(product);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (selectedProduct) {
+      try {
+        await deleteProduct.mutateAsync(selectedProduct.id);
+        setIsDeleteDialogOpen(false);
+        setSelectedProduct(null);
+        refetch();
+      } catch (error) {
+        toast.error('حدث خطأ في حذف المنتج');
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -160,10 +198,20 @@ export default function ProductsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="text-blue-500 hover:text-blue-600">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                          onClick={() => handleEdit(product)}
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => handleDelete(product)}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -175,6 +223,49 @@ export default function ProductsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Dialog تعديل المنتج */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>تعديل المنتج</DialogTitle>
+            <DialogDescription>
+              تحديث بيانات المنتج
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProduct && (
+            <ProductForm 
+              initialData={selectedProduct}
+              isEditing={true}
+              onSuccess={() => {
+                setIsEditDialogOpen(false);
+                setSelectedProduct(null);
+                refetch();
+              }} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* AlertDialog تأكيد الحذف */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>هل أنت متأكد من حذف هذا المنتج؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedProduct && (
+                <>سيتم حذف المنتج &quot;{selectedProduct.name}&quot; بشكل دائم. لا يمكن التراجع عن هذا الإجراء.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
