@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,9 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
+import { Eye, EyeOff, Loader2, Store } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('البريد الإلكتروني غير صحيح'),
@@ -24,9 +22,15 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const login = useAuthStore((state) => state.login);
+  const { login, user, isInitialized } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isInitialized && user) {
+      router.push('/dashboard');
+    }
+  }, [user, isInitialized, router]);
 
   const {
     register,
@@ -43,8 +47,7 @@ export default function LoginPage() {
       toast.success('تم تسجيل الدخول بنجاح!');
       router.push('/dashboard');
     } catch (error: any) {
-      const message = error.response?.data?.error || 'فشل تسجيل الدخول. يرجى التحقق من بياناتك.';
-      toast.error(message);
+      toast.error(error.response?.data?.error || 'فشل تسجيل الدخول');
     } finally {
       setIsLoading(false);
     }
@@ -56,13 +59,11 @@ export default function LoginPage() {
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
             <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
-              <span className="text-white text-2xl font-bold">د</span>
+              <Store className="h-8 w-8 text-white" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">نظام إدارة المتجر</CardTitle>
-          <CardDescription>
-            قم بتسجيل الدخول للوصول إلى لوحة التحكم
-          </CardDescription>
+          <CardDescription>قم بتسجيل الدخول للوصول إلى لوحة التحكم</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -76,9 +77,7 @@ export default function LoginPage() {
                 {...register('email')}
                 className={errors.email ? 'border-red-500' : ''}
               />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
-              )}
+              {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -100,9 +99,7 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-sm text-red-500">{errors.password.message}</p>
-              )}
+              {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
@@ -115,12 +112,6 @@ export default function LoginPage() {
                 'تسجيل الدخول'
               )}
             </Button>
-
-            <div className="text-center text-sm text-muted-foreground">
-              <Link href="/forgot-password" className="hover:text-primary">
-                نسيت كلمة المرور؟
-              </Link>
-            </div>
           </form>
         </CardContent>
       </Card>

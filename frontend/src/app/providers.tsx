@@ -13,7 +13,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
       queries: {
         staleTime: 60 * 1000,
         refetchOnWindowFocus: false,
-        retry: 1,
       },
     },
   }));
@@ -26,23 +25,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="light"
-        enableSystem
-        disableTransitionOnChange
-      >
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
         {children}
-        <Toaster
-          position="top-center"
-          reverseOrder={false}
-          toastOptions={{
-            duration: 3000,
-            style: {
-              direction: 'rtl',
-            },
-          }}
-        />
+        <Toaster position="top-center" />
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

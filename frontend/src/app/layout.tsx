@@ -9,11 +9,8 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: 'نظام إدارة المتجر - Duka',
-  description: 'نظام إدارة متجر متكامل مع Next.js و Django',
-  icons: {
-    icon: '/favicon.ico',
-  },
+  title: 'نظام إدارة المتجر',
+  description: 'نظام إدارة متجر متكامل',
 };
 
 export default function RootLayout({
