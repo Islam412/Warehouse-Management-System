@@ -3,6 +3,11 @@
 import os
 import sys
 
+# ✅ تطبيق التصحيح قبل أي شيء
+try:
+    import patch_django  # noqa
+except ImportError:
+    pass
 
 def main():
     """Run administrative tasks."""
@@ -16,7 +21,6 @@ def main():
             "forget to activate a virtual environment?"
         ) from exc
     execute_from_command_line(sys.argv)
-
 
 if __name__ == '__main__':
     main()
