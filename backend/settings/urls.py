@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import api
 
-app_name = 'settings_app'
+app_name = 'settings'
 
 router = DefaultRouter()
 router.register(r'branches', api.BranchViewSet, basename='branch')

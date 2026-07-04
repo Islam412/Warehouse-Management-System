@@ -46,7 +46,7 @@ urlpatterns = [
     path('api/v1/finance/', include('finance.urls')),
     path('api/v1/notifications/', include('notifications.urls')),
     path('api/v1/reports/', include('reports.urls')),
-    path('api/v1/settings/', include('settings_app.urls')),
+    path('api/v1/settings/', include('settings.urls')),
     
     # Swagger/OpenAPI
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
