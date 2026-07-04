@@ -176,12 +176,10 @@ class DailyClosingModelTest(TestCase):
     def test_create_closing(self):
         """اختبار إنشاء إغلاق يومي"""
         self.assertEqual(self.closing.opening_balance, Decimal('1000.00'))
-        self.assertEqual(self.closing.closing_balance, Decimal('1300.00'))  # 1000 + 500 - 200
+        self.assertEqual(self.closing.closing_balance, Decimal('1300.00'))
     
     def test_closing_profit(self):
         """اختبار حساب صافي الربح"""
-        # (total_income + cash_in) - (total_expenses + cash_out)
-        # (500 + 500) - (300 + 200) = 1000 - 500 = 500
         self.assertEqual(self.closing.net_profit, Decimal('500.00'))
 
 class FinanceAPITest(TestCase):
@@ -215,6 +213,23 @@ class FinanceAPITest(TestCase):
             name='Sales Revenue',
             account_type='revenue'
         )
+        
+        # إنشاء قيد يومية للاختبار
+        self.journal_entry = JournalEntry.objects.create(
+            entry_number='JE-TEST-001',
+            description='قيد اختبار',
+            created_by=self.user
+        )
+        JournalLine.objects.create(
+            journal_entry=self.journal_entry,
+            account=self.account,
+            debit=Decimal('100.00')
+        )
+        JournalLine.objects.create(
+            journal_entry=self.journal_entry,
+            account=self.account2,
+            credit=Decimal('100.00')
+        )
     
     def test_list_accounts(self):
         """اختبار جلب قائمة الحسابات"""
@@ -240,7 +255,8 @@ class FinanceAPITest(TestCase):
         data = {'amount': '500.00'}
         response = self.client.post(f'/api/v1/finance/api/accounts/{self.account.id}/update_balance/', data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['new_balance'], '1500.00')
+        # مقارنة Decimal مع Decimal
+        self.assertEqual(response.data['new_balance'], Decimal('1500.00'))
     
     def test_create_journal_entry(self):
         """اختبار إنشاء قيد يومية"""
@@ -260,16 +276,12 @@ class FinanceAPITest(TestCase):
         }
         response = self.client.post('/api/v1/finance/api/journal-entries/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # التحقق من وجود رقم القيد
+        self.assertIsNotNone(response.data.get('entry_number'))
         self.assertIn('JE-', response.data['entry_number'])
     
     def test_list_journal_entries(self):
         """اختبار جلب قائمة قيد اليومية"""
-        # إنشاء قيد أولاً
-        entry = JournalEntry.objects.create(
-            entry_number='JE-001',
-            description='قيد اختبار',
-            created_by=self.user
-        )
         response = self.client.get('/api/v1/finance/api/journal-entries/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
     
