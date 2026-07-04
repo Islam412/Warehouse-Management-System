@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -12,6 +12,11 @@ from .serializers import (
     PaymentMethodSerializer,
     ShippingMethodSerializer
 )
+
+
+# ============================================
+# Company ViewSet
+# ============================================
 
 class CompanyViewSet(viewsets.ViewSet):
     """ViewSet لإدارة بيانات الشركة"""
@@ -84,10 +89,13 @@ class CompanyViewSet(viewsets.ViewSet):
         })
 
 
+# ============================================
+# Branch ViewSet
+# ============================================
+
 class BranchViewSet(viewsets.ModelViewSet):
     """ViewSet لإدارة الفروع"""
     queryset = Branch.objects.all().select_related('company', 'manager')
-    serializer_class = BranchSerializer
     permission_classes = [IsAuthenticated]
     
     def get_serializer_class(self):
@@ -98,6 +106,18 @@ class BranchViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         company = Company.get_company()
         return super().get_queryset().filter(company=company)
+    
+    def create(self, request, *args, **kwargs):
+        """إنشاء فرع جديد مع إرجاع البيانات الكاملة"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # حفظ الفرع
+        branch = serializer.save()
+        
+        # إرجاع البيانات باستخدام BranchSerializer لعرض الكود
+        output_serializer = BranchSerializer(branch)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['post'])
     def toggle_active(self, request, pk=None):
@@ -127,6 +147,10 @@ class BranchViewSet(viewsets.ModelViewSet):
             'message': f'{branch.name} is now the main branch'
         })
 
+
+# ============================================
+# Settings ViewSet
+# ============================================
 
 class SettingsViewSet(viewsets.ViewSet):
     """ViewSet لإعدادات النظام"""
@@ -165,6 +189,10 @@ class SettingsViewSet(viewsets.ViewSet):
         return Response(serializer.data)
 
 
+# ============================================
+# SocialLink ViewSet
+# ============================================
+
 class SocialLinkViewSet(viewsets.ModelViewSet):
     """ViewSet لروابط التواصل الاجتماعي"""
     queryset = SocialLink.objects.all()
@@ -175,6 +203,10 @@ class SocialLinkViewSet(viewsets.ModelViewSet):
         company = Company.get_company()
         return super().get_queryset().filter(company=company)
 
+
+# ============================================
+# PaymentMethod ViewSet
+# ============================================
 
 class PaymentMethodViewSet(viewsets.ModelViewSet):
     """ViewSet لطرق الدفع"""
@@ -200,6 +232,10 @@ class PaymentMethodViewSet(viewsets.ModelViewSet):
         
         return Response({'message': f'{method.name} is now the default payment method'})
 
+
+# ============================================
+# ShippingMethod ViewSet
+# ============================================
 
 class ShippingMethodViewSet(viewsets.ModelViewSet):
     """ViewSet لطرق الشحن"""
