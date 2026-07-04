@@ -35,7 +35,7 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
-    # API Apps - مسار accounts يجب أن يكون متطابق مع ما تستخدمه الاختبارات
+    # API Apps 
     path('api/v1/auth/', include('accounts.urls')),
     path('api/v1/products/', include('products.urls')),
     path('api/v1/inventory/', include('inventory.urls')),
@@ -46,6 +46,7 @@ urlpatterns = [
     path('api/v1/finance/', include('finance.urls')),
     path('api/v1/notifications/', include('notifications.urls')),
     path('api/v1/reports/', include('reports.urls')),
+    path('api/v1/settings/', include('settings_app.urls')),
     
     # Swagger/OpenAPI
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),

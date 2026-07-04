@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 import uuid
 from accounts.models import User
@@ -22,22 +23,17 @@ class Notification(models.Model):
     message = models.TextField(verbose_name="الرسالة")
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='info', verbose_name="نوع الإشعار")
     
-    # المستخدم المستهدف
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', verbose_name="المستخدم")
     
-    # حالة الإشعار
     is_read = models.BooleanField(default=False, verbose_name="مقروء")
     is_sent = models.BooleanField(default=False, verbose_name="تم الإرسال")
     
-    # رابط الإشعار
     link = models.CharField(max_length=500, blank=True, null=True, verbose_name="الرابط")
     
-    # بيانات إضافية
     reference_type = models.CharField(max_length=50, blank=True, null=True, verbose_name="نوع المرجع")
     reference_id = models.UUIDField(blank=True, null=True, verbose_name="معرف المرجع")
     extra_data = models.JSONField(default=dict, blank=True, verbose_name="بيانات إضافية")
     
-    # التواريخ
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(blank=True, null=True, verbose_name="تاريخ القراءة")
     sent_at = models.DateTimeField(blank=True, null=True, verbose_name="تاريخ الإرسال")
@@ -72,12 +68,10 @@ class NotificationPreference(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_preferences')
     
-    # أنواع الإشعارات
     enable_notifications = models.BooleanField(default=True, verbose_name="تفعيل الإشعارات")
     enable_email = models.BooleanField(default=True, verbose_name="إشعارات البريد الإلكتروني")
     enable_push = models.BooleanField(default=True, verbose_name="إشعارات التطبيق")
     
-    # إعدادات كل نوع
     stock_alert = models.BooleanField(default=True, verbose_name="تنبيهات المخزون")
     payment_due = models.BooleanField(default=True, verbose_name="مواعيد الدفع")
     collection_due = models.BooleanField(default=True, verbose_name="مواعيد التحصيل")
