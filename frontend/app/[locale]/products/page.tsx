@@ -38,10 +38,16 @@ export default function ProductsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   // جلب البيانات
-  const { data: products, isLoading, error } = useProducts({ search });
+  const { data: productsData, isLoading, error } = useProducts({ search });
   const { data: categories } = useCategories();
   const { data: brands } = useBrands();
   const { data: units } = useUnits();
+
+  // التأكد من أن products هي مصفوفة
+  const products = Array.isArray(productsData) ? productsData : 
+                   productsData?.results ? productsData.results : 
+                   productsData?.data ? (Array.isArray(productsData.data) ? productsData.data : []) :
+                   [];
 
   if (isLoading) {
     return (
@@ -120,20 +126,20 @@ export default function ProductsPage() {
               ) : (
                 products.map((product: any, index: number) => (
                   <motion.tr
-                    key={product.id}
+                    key={product.id || index}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     className="border-b border-gray-100 dark:border-gray-800"
                   >
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell className="text-sm text-gray-500">{product.sku}</TableCell>
-                    <TableCell>{product.category_name}</TableCell>
-                    <TableCell>{product.brand_name}</TableCell>
-                    <TableCell>{product.selling_price} ج.م</TableCell>
+                    <TableCell className="font-medium">{product.name || 'غير معروف'}</TableCell>
+                    <TableCell className="text-sm text-gray-500">{product.sku || '-'}</TableCell>
+                    <TableCell>{product.category_name || product.category?.name || '-'}</TableCell>
+                    <TableCell>{product.brand_name || product.brand?.name || '-'}</TableCell>
+                    <TableCell>{product.selling_price || 0} ج.م</TableCell>
                     <TableCell>
-                      <Badge variant={product.is_active ? 'default' : 'destructive'}>
-                        {product.is_active ? 'نشط' : 'غير نشط'}
+                      <Badge variant={product.is_active !== false ? 'default' : 'destructive'}>
+                        {product.is_active !== false ? 'نشط' : 'غير نشط'}
                       </Badge>
                     </TableCell>
                     <TableCell>
