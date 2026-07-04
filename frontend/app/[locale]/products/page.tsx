@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useProducts, useCategories, useBrands, useUnits } from '@/hooks/useProducts';
+import { useProducts } from '@/hooks/useProducts';
+import { ProductForm } from '@/components/forms/ProductForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -38,10 +39,7 @@ export default function ProductsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   // جلب البيانات
-  const { data: productsData, isLoading, error } = useProducts({ search });
-  const { data: categories } = useCategories();
-  const { data: brands } = useBrands();
-  const { data: units } = useUnits();
+  const { data: productsData, isLoading, error, refetch } = useProducts({ search });
 
   // التأكد من أن products هي مصفوفة
   const products = Array.isArray(productsData) ? productsData : 
@@ -76,10 +74,28 @@ export default function ProductsPage() {
             إدارة جميع المنتجات في المتجر
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-          <Plus className="w-4 h-4" />
-          إضافة منتج
-        </Button>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              إضافة منتج
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>إضافة منتج جديد</DialogTitle>
+              <DialogDescription>
+                أدخل معلومات المنتج الجديد
+              </DialogDescription>
+            </DialogHeader>
+            <ProductForm 
+              onSuccess={() => {
+                setIsCreateDialogOpen(false);
+                refetch();
+              }} 
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* البحث */}
