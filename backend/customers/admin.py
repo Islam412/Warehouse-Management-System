@@ -31,7 +31,16 @@ class CustomerAdmin(admin.ModelAdmin):
     
     def balance_display(self, obj):
         """عرض الرصيد بشكل منسق"""
-        color = '#28a745' if obj.balance >= 0 else '#dc3545'
-        return format_html('<span style="color: {}; font-weight: bold;">{:.2f} جنيه</span>', 
-                          color, obj.balance)
+        try:
+            balance = float(obj.balance) if obj.balance else 0
+            color = '#28a745' if balance >= 0 else '#dc3545'
+            return format_html(
+                '<span style="color: {}; font-weight: bold;">{:.2f} جنيه</span>',
+                color, balance
+            )
+        except (ValueError, TypeError):
+            return format_html(
+                '<span style="color: #6c757d; font-weight: bold;">0.00 جنيه</span>'
+            )
     balance_display.short_description = _('الرصيد')
+    balance_display.admin_order_field = 'balance'

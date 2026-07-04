@@ -33,7 +33,6 @@ class AccountAdmin(admin.ModelAdmin):
     )
     
     def account_type_display(self, obj):
-        """عرض نوع الحساب بشكل منسق"""
         colors = {
             'asset': '#28a745',
             'liability': '#dc3545',
@@ -47,10 +46,13 @@ class AccountAdmin(admin.ModelAdmin):
     account_type_display.short_description = _('نوع الحساب')
     
     def balance_display(self, obj):
-        """عرض الرصيد بشكل منسق"""
-        color = '#28a745' if obj.balance >= 0 else '#dc3545'
-        return format_html('<span style="color: {}; font-weight: bold;">{:.2f} جنيه</span>', 
-                          color, obj.balance)
+        try:
+            balance = float(obj.balance) if obj.balance else 0
+            color = '#28a745' if balance >= 0 else '#dc3545'
+            return format_html('<span style="color: {}; font-weight: bold;">{:.2f} جنيه</span>', 
+                              color, balance)
+        except (ValueError, TypeError):
+            return format_html('<span style="color: #6c757d; font-weight: bold;">0.00 جنيه</span>')
     balance_display.short_description = _('الرصيد')
     
     actions = ['activate_accounts', 'deactivate_accounts']
@@ -66,7 +68,6 @@ class AccountAdmin(admin.ModelAdmin):
     deactivate_accounts.short_description = _('إلغاء تفعيل الحسابات المحددة')
 
 class JournalLineInline(admin.TabularInline):
-    """عرض سطور قيد اليومية"""
     model = JournalLine
     extra = 2
     fields = ['account', 'debit', 'credit', 'description']
@@ -79,7 +80,6 @@ class JournalLineInline(admin.TabularInline):
 
 @admin.register(JournalEntry)
 class JournalEntryAdmin(admin.ModelAdmin):
-    """إدارة قيد اليومية"""
     list_display = ['entry_number', 'date', 'description', 'total_debit_display', 
                    'total_credit_display', 'is_balanced_display', 'created_at']
     list_filter = ['date', 'reference_type', 'created_at']
@@ -106,11 +106,19 @@ class JournalEntryAdmin(admin.ModelAdmin):
     )
     
     def total_debit_display(self, obj):
-        return format_html('<span style="color: #17a2b8; font-weight: bold;">{:.2f} جنيه</span>', obj.total_debit)
+        try:
+            total = float(obj.total_debit) if obj.total_debit else 0
+            return format_html('<span style="color: #17a2b8; font-weight: bold;">{:.2f} جنيه</span>', total)
+        except (ValueError, TypeError):
+            return format_html('<span style="color: #17a2b8; font-weight: bold;">0.00 جنيه</span>')
     total_debit_display.short_description = _('إجمالي المدين')
     
     def total_credit_display(self, obj):
-        return format_html('<span style="color: #ffc107; font-weight: bold;">{:.2f} جنيه</span>', obj.total_credit)
+        try:
+            total = float(obj.total_credit) if obj.total_credit else 0
+            return format_html('<span style="color: #ffc107; font-weight: bold;">{:.2f} جنيه</span>', total)
+        except (ValueError, TypeError):
+            return format_html('<span style="color: #ffc107; font-weight: bold;">0.00 جنيه</span>')
     total_credit_display.short_description = _('إجمالي الدائن')
     
     def is_balanced_display(self, obj):
@@ -126,7 +134,6 @@ class JournalEntryAdmin(admin.ModelAdmin):
 
 @admin.register(Expense)
 class ExpenseAdmin(admin.ModelAdmin):
-    """إدارة المصروفات"""
     list_display = ['category_display', 'amount_display', 'date', 'description_short', 'payment_method', 'invoice_link']
     list_filter = ['category', 'date', 'payment_method']
     search_fields = ['description', 'reference']
@@ -155,7 +162,11 @@ class ExpenseAdmin(admin.ModelAdmin):
     category_display.short_description = _('الفئة')
     
     def amount_display(self, obj):
-        return format_html('<span style="color: #dc3545; font-weight: bold;">{:.2f} جنيه</span>', obj.amount)
+        try:
+            amount = float(obj.amount) if obj.amount else 0
+            return format_html('<span style="color: #dc3545; font-weight: bold;">{:.2f} جنيه</span>', amount)
+        except (ValueError, TypeError):
+            return format_html('<span style="color: #dc3545; font-weight: bold;">0.00 جنيه</span>')
     amount_display.short_description = _('المبلغ')
     
     def description_short(self, obj):
@@ -178,7 +189,6 @@ class ExpenseAdmin(admin.ModelAdmin):
 
 @admin.register(Income)
 class IncomeAdmin(admin.ModelAdmin):
-    """إدارة الإيرادات"""
     list_display = ['category_display', 'amount_display', 'date', 'description_short', 'payment_method', 'invoice_link']
     list_filter = ['category', 'date', 'payment_method']
     search_fields = ['description', 'reference']
@@ -207,7 +217,11 @@ class IncomeAdmin(admin.ModelAdmin):
     category_display.short_description = _('الفئة')
     
     def amount_display(self, obj):
-        return format_html('<span style="color: #28a745; font-weight: bold;">{:.2f} جنيه</span>', obj.amount)
+        try:
+            amount = float(obj.amount) if obj.amount else 0
+            return format_html('<span style="color: #28a745; font-weight: bold;">{:.2f} جنيه</span>', amount)
+        except (ValueError, TypeError):
+            return format_html('<span style="color: #28a745; font-weight: bold;">0.00 جنيه</span>')
     amount_display.short_description = _('المبلغ')
     
     def description_short(self, obj):
@@ -222,7 +236,6 @@ class IncomeAdmin(admin.ModelAdmin):
 
 @admin.register(CashTransaction)
 class CashTransactionAdmin(admin.ModelAdmin):
-    """إدارة المعاملات النقدية"""
     list_display = ['transaction_type_display', 'amount_display', 'date', 'description_short']
     list_filter = ['transaction_type', 'date']
     search_fields = ['description', 'reference_id']
@@ -255,9 +268,13 @@ class CashTransactionAdmin(admin.ModelAdmin):
     transaction_type_display.short_description = _('نوع المعاملة')
     
     def amount_display(self, obj):
-        color = '#28a745' if obj.transaction_type == 'cash_in' else '#dc3545'
-        return format_html('<span style="color: {}; font-weight: bold;">{:.2f} جنيه</span>', 
-                          color, obj.amount)
+        try:
+            amount = float(obj.amount) if obj.amount else 0
+            color = '#28a745' if obj.transaction_type == 'cash_in' else '#dc3545'
+            return format_html('<span style="color: {}; font-weight: bold;">{:.2f} جنيه</span>', 
+                              color, amount)
+        except (ValueError, TypeError):
+            return format_html('<span style="color: #6c757d; font-weight: bold;">0.00 جنيه</span>')
     amount_display.short_description = _('المبلغ')
     
     def description_short(self, obj):
@@ -290,15 +307,27 @@ class DailyClosingAdmin(admin.ModelAdmin):
     )
     
     def opening_balance_display(self, obj):
-        return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', obj.opening_balance)
+        try:
+            balance = float(obj.opening_balance) if obj.opening_balance else 0
+            return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', balance)
+        except (ValueError, TypeError):
+            return format_html('<span style="font-weight: bold;">0.00 جنيه</span>')
     opening_balance_display.short_description = _('الرصيد الافتتاحي')
     
     def closing_balance_display(self, obj):
-        return format_html('<span style="font-weight: bold; color: #17a2b8;">{:.2f} جنيه</span>', obj.closing_balance)
+        try:
+            balance = float(obj.closing_balance) if obj.closing_balance else 0
+            return format_html('<span style="font-weight: bold; color: #17a2b8;">{:.2f} جنيه</span>', balance)
+        except (ValueError, TypeError):
+            return format_html('<span style="font-weight: bold; color: #17a2b8;">0.00 جنيه</span>')
     closing_balance_display.short_description = _('الرصيد الختامي')
     
     def net_profit_display(self, obj):
-        color = '#28a745' if obj.net_profit >= 0 else '#dc3545'
-        return format_html('<span style="color: {}; font-weight: bold;">{:.2f} جنيه</span>', 
-                          color, obj.net_profit)
+        try:
+            profit = float(obj.net_profit) if obj.net_profit else 0
+            color = '#28a745' if profit >= 0 else '#dc3545'
+            return format_html('<span style="color: {}; font-weight: bold;">{:.2f} جنيه</span>', 
+                              color, profit)
+        except (ValueError, TypeError):
+            return format_html('<span style="color: #6c757d; font-weight: bold;">0.00 جنيه</span>')
     net_profit_display.short_description = _('صافي الربح')
