@@ -1,20 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState } from 'react';
 import { useCreateProduct, useCategories, useBrands, useUnits } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -24,401 +14,341 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
-
-// Schema التحقق
-const productSchema = z.object({
-  name: z.string().min(3, 'الاسم يجب أن يكون 3 أحرف على الأقل'),
-  name_ar: z.string().optional(),
-  description: z.string().optional(),
-  category: z.string().min(1, 'الفئة مطلوبة'),
-  brand: z.string().min(1, 'العلامة التجارية مطلوبة'),
-  unit: z.string().min(1, 'وحدة القياس مطلوبة'),
-  sku: z.string().min(1, 'SKU مطلوب'),
-  barcode: z.string().optional(),
-  purchase_price: z.coerce.number().min(0, 'سعر الشراء يجب أن يكون أكبر من 0'),
-  selling_price: z.coerce.number().min(0, 'سعر البيع يجب أن يكون أكبر من 0'),
-  wholesale_price: z.coerce.number().optional(),
-  size: z.string().optional(),
-  color: z.string().optional(),
-  weight: z.coerce.number().optional(),
-  is_active: z.boolean().default(true),
-  is_featured: z.boolean().default(false),
-  has_stock: z.boolean().default(true),
-});
-
-type ProductFormValues = z.infer<typeof productSchema>;
+import { toast } from 'sonner';
 
 interface ProductFormProps {
   onSuccess?: () => void;
-  initialData?: Partial<ProductFormValues>;
-  isEditing?: boolean;
 }
 
-export function ProductForm({ onSuccess, initialData, isEditing = false }: ProductFormProps) {
+export function ProductForm({ onSuccess }: ProductFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [formData, setFormData] = useState({
+    name: '',
+    name_ar: '',
+    description: '',
+    category: '',
+    brand: '',
+    unit: '',
+    sku: '',
+    barcode: '',
+    purchase_price: '',
+    selling_price: '',
+    wholesale_price: '',
+    size: '',
+    color: '',
+    weight: '',
+    is_active: true,
+    is_featured: false,
+    has_stock: true,
+  });
+
   const createProduct = useCreateProduct();
   const { data: categories } = useCategories();
   const { data: brands } = useBrands();
   const { data: units } = useUnits();
 
-  const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
-    defaultValues: initialData || {
-      name: '',
-      name_ar: '',
-      description: '',
-      category: '',
-      brand: '',
-      unit: '',
-      sku: '',
-      barcode: '',
-      purchase_price: 0,
-      selling_price: 0,
-      wholesale_price: 0,
-      size: '',
-      color: '',
-      weight: 0,
-      is_active: true,
-      is_featured: false,
-      has_stock: true,
-    },
-  });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  const onSubmit = async (data: ProductFormValues) => {
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSwitchChange = (name: string, checked: boolean) => {
+    setFormData((prev) => ({ ...prev, [name]: checked }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
+
     try {
+      const data = {
+        ...formData,
+        purchase_price: parseFloat(formData.purchase_price) || 0,
+        selling_price: parseFloat(formData.selling_price) || 0,
+        wholesale_price: parseFloat(formData.wholesale_price) || 0,
+        weight: parseFloat(formData.weight) || 0,
+      };
+
       await createProduct.mutateAsync(data);
-      form.reset();
+      setFormData({
+        name: '',
+        name_ar: '',
+        description: '',
+        category: '',
+        brand: '',
+        unit: '',
+        sku: '',
+        barcode: '',
+        purchase_price: '',
+        selling_price: '',
+        wholesale_price: '',
+        size: '',
+        color: '',
+        weight: '',
+        is_active: true,
+        is_featured: false,
+        has_stock: true,
+      });
       onSuccess?.();
-    } catch (error) {
-      console.error('Error creating product:', error);
+      toast.success('تم إضافة المنتج بنجاح');
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'حدث خطأ في إضافة المنتج');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* الاسم */}
-          <FormField
-            control={form.control}
+    <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* الاسم */}
+        <div className="space-y-2">
+          <Label htmlFor="name">اسم المنتج *</Label>
+          <Input
+            id="name"
             name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>اسم المنتج *</FormLabel>
-                <FormControl>
-                  <Input placeholder="مثلاً: قلب حنفية" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="مثلاً: قلب حنفية"
+            required
           />
+        </div>
 
-          {/* الاسم بالعربية */}
-          <FormField
-            control={form.control}
+        {/* الاسم بالعربية */}
+        <div className="space-y-2">
+          <Label htmlFor="name_ar">اسم المنتج بالعربية</Label>
+          <Input
+            id="name_ar"
             name="name_ar"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>اسم المنتج بالعربية</FormLabel>
-                <FormControl>
-                  <Input placeholder="مثلاً: قلب حنفية" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            value={formData.name_ar}
+            onChange={handleChange}
+            placeholder="مثلاً: قلب حنفية"
           />
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* الفئة */}
-          <FormField
-            control={form.control}
-            name="category"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>الفئة *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر الفئة" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {categories?.map((cat: any) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* العلامة التجارية */}
-          <FormField
-            control={form.control}
-            name="brand"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>العلامة التجارية *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر العلامة" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {brands?.map((brand: any) => (
-                      <SelectItem key={brand.id} value={brand.id}>
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* وحدة القياس */}
-          <FormField
-            control={form.control}
-            name="unit"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>وحدة القياس *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر الوحدة" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {units?.map((unit: any) => (
-                      <SelectItem key={unit.id} value={unit.id}>
-                        {unit.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* الفئة */}
+        <div className="space-y-2">
+          <Label>الفئة *</Label>
+          <Select onValueChange={(value) => handleSelectChange('category', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="اختر الفئة" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories?.map((cat: any) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* SKU */}
-          <FormField
-            control={form.control}
+        {/* العلامة التجارية */}
+        <div className="space-y-2">
+          <Label>العلامة التجارية *</Label>
+          <Select onValueChange={(value) => handleSelectChange('brand', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="اختر العلامة" />
+            </SelectTrigger>
+            <SelectContent>
+              {brands?.map((brand: any) => (
+                <SelectItem key={brand.id} value={brand.id}>
+                  {brand.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* وحدة القياس */}
+        <div className="space-y-2">
+          <Label>وحدة القياس *</Label>
+          <Select onValueChange={(value) => handleSelectChange('unit', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="اختر الوحدة" />
+            </SelectTrigger>
+            <SelectContent>
+              {units?.map((unit: any) => (
+                <SelectItem key={unit.id} value={unit.id}>
+                  {unit.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* SKU */}
+        <div className="space-y-2">
+          <Label htmlFor="sku">SKU *</Label>
+          <Input
+            id="sku"
             name="sku"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>SKU *</FormLabel>
-                <FormControl>
-                  <Input placeholder="مثلاً: SKU-001" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            value={formData.sku}
+            onChange={handleChange}
+            placeholder="مثلاً: SKU-001"
+            required
           />
+        </div>
 
-          {/* الباركود */}
-          <FormField
-            control={form.control}
+        {/* الباركود */}
+        <div className="space-y-2">
+          <Label htmlFor="barcode">الباركود</Label>
+          <Input
+            id="barcode"
             name="barcode"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>الباركود</FormLabel>
-                <FormControl>
-                  <Input placeholder="مثلاً: 1234567890" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            value={formData.barcode}
+            onChange={handleChange}
+            placeholder="مثلاً: 1234567890"
           />
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* سعر الشراء */}
-          <FormField
-            control={form.control}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* سعر الشراء */}
+        <div className="space-y-2">
+          <Label htmlFor="purchase_price">سعر الشراء *</Label>
+          <Input
+            id="purchase_price"
             name="purchase_price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>سعر الشراء *</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="50.00" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            type="number"
+            step="0.01"
+            value={formData.purchase_price}
+            onChange={handleChange}
+            placeholder="50.00"
+            required
           />
+        </div>
 
-          {/* سعر البيع */}
-          <FormField
-            control={form.control}
+        {/* سعر البيع */}
+        <div className="space-y-2">
+          <Label htmlFor="selling_price">سعر البيع *</Label>
+          <Input
+            id="selling_price"
             name="selling_price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>سعر البيع *</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="80.00" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            type="number"
+            step="0.01"
+            value={formData.selling_price}
+            onChange={handleChange}
+            placeholder="80.00"
+            required
           />
+        </div>
 
-          {/* سعر الجملة */}
-          <FormField
-            control={form.control}
+        {/* سعر الجملة */}
+        <div className="space-y-2">
+          <Label htmlFor="wholesale_price">سعر الجملة</Label>
+          <Input
+            id="wholesale_price"
             name="wholesale_price"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>سعر الجملة</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="65.00" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            type="number"
+            step="0.01"
+            value={formData.wholesale_price}
+            onChange={handleChange}
+            placeholder="65.00"
           />
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* المقاس */}
-          <FormField
-            control={form.control}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* المقاس */}
+        <div className="space-y-2">
+          <Label htmlFor="size">المقاس</Label>
+          <Input
+            id="size"
             name="size"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>المقاس</FormLabel>
-                <FormControl>
-                  <Input placeholder="مثلاً: 1/2" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            value={formData.size}
+            onChange={handleChange}
+            placeholder="مثلاً: 1/2"
           />
+        </div>
 
-          {/* اللون */}
-          <FormField
-            control={form.control}
+        {/* اللون */}
+        <div className="space-y-2">
+          <Label htmlFor="color">اللون</Label>
+          <Input
+            id="color"
             name="color"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>اللون</FormLabel>
-                <FormControl>
-                  <Input placeholder="مثلاً: Chrome" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            value={formData.color}
+            onChange={handleChange}
+            placeholder="مثلاً: Chrome"
           />
+        </div>
 
-          {/* الوزن */}
-          <FormField
-            control={form.control}
+        {/* الوزن */}
+        <div className="space-y-2">
+          <Label htmlFor="weight">الوزن (كجم)</Label>
+          <Input
+            id="weight"
             name="weight"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>الوزن (كجم)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="1.5" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            type="number"
+            step="0.01"
+            value={formData.weight}
+            onChange={handleChange}
+            placeholder="1.5"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+        {/* نشط */}
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <Label>نشط</Label>
+          <Switch
+            checked={formData.is_active}
+            onCheckedChange={(checked) => handleSwitchChange('is_active', checked)}
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          {/* نشط */}
-          <FormField
-            control={form.control}
-            name="is_active"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <FormLabel>نشط</FormLabel>
-                </div>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-
-          {/* مميز */}
-          <FormField
-            control={form.control}
-            name="is_featured"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <FormLabel>مميز</FormLabel>
-                </div>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-
-          {/* به مخزون */}
-          <FormField
-            control={form.control}
-            name="has_stock"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <FormLabel>به مخزون</FormLabel>
-                </div>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
+        {/* مميز */}
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <Label>مميز</Label>
+          <Switch
+            checked={formData.is_featured}
+            onCheckedChange={(checked) => handleSwitchChange('is_featured', checked)}
           />
         </div>
 
-        {/* الوصف */}
-        <FormField
-          control={form.control}
+        {/* به مخزون */}
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <Label>به مخزون</Label>
+          <Switch
+            checked={formData.has_stock}
+            onCheckedChange={(checked) => handleSwitchChange('has_stock', checked)}
+          />
+        </div>
+      </div>
+
+      {/* الوصف */}
+      <div className="space-y-2">
+        <Label htmlFor="description">الوصف</Label>
+        <textarea
+          id="description"
           name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>الوصف</FormLabel>
-              <FormControl>
-                <textarea
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="وصف المنتج..."
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          value={formData.description}
+          onChange={handleChange}
+          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          placeholder="وصف المنتج..."
         />
+      </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-              جاري الحفظ...
-            </>
-          ) : (
-            isEditing ? 'تحديث المنتج' : 'إضافة المنتج'
-          )}
-        </Button>
-      </form>
-    </Form>
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? (
+          <>
+            <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+            جاري الحفظ...
+          </>
+        ) : (
+          'إضافة المنتج'
+        )}
+      </Button>
+    </form>
   );
 }
