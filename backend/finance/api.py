@@ -69,6 +69,16 @@ class JournalEntryViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return JournalEntryCreateSerializer
         return JournalEntrySerializer
+    
+    def create(self, request, *args, **kwargs):
+        """إنشاء قيد يومية وإرجاع البيانات الكاملة"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        journal_entry = serializer.save()
+        
+        # إرجاع البيانات الكاملة باستخدام JournalEntrySerializer
+        output_serializer = JournalEntrySerializer(journal_entry)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
 class CashTransactionViewSet(viewsets.ModelViewSet):
     """ViewSet لإدارة المعاملات النقدية"""
@@ -127,7 +137,6 @@ class DailyClosingViewSet(viewsets.ModelViewSet):
         
         # حساب البيانات
         from sales.models import Invoice
-        from purchases.models import PurchaseOrder
         
         # مبيعات اليوم
         today_sales = Invoice.objects.filter(date__date=today)
