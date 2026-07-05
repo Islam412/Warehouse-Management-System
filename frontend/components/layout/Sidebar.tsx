@@ -20,9 +20,10 @@ import {
 const menuItems = [
   { href: '/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
   { href: '/products', label: 'المنتجات', icon: Package },
-  { href: '/sales', label: 'المبيعات', icon: ShoppingCart },
   { href: '/customers', label: 'العملاء', icon: Users },
   { href: '/suppliers', label: 'الموردين', icon: Truck },
+  { href: '/sales', label: 'المبيعات', icon: ShoppingCart },
+  { href: '/purchases', label: 'المشتريات', icon: ShoppingCart },
   { href: '/inventory', label: 'المخزون', icon: Warehouse },
   { href: '/finance', label: 'المالية', icon: DollarSign },
   { href: '/notifications', label: 'الإشعارات', icon: Bell },
@@ -32,6 +33,9 @@ const menuItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+
+  // استخراج المسار بدون اللغة
+  const path = pathname?.replace(/^\/(ar|en)/, '') || '/';
 
   return (
     <aside className="fixed right-0 top-0 z-40 h-screen w-64 border-l bg-background">
@@ -47,7 +51,7 @@ export function Sidebar() {
         <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-1">
             {menuItems.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+              const isActive = path === item.href || path.startsWith(item.href + '/');
               const Icon = item.icon;
 
               return (
