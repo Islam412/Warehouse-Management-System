@@ -31,6 +31,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
     
+    def partial_update(self, request, *args, **kwargs):
+        """دعم التحديث الجزئي - مهم لـ Switches"""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+    
     @action(detail=True, methods=['post'])
     @transaction.atomic
     def update_balance(self, request, pk=None):
@@ -44,12 +52,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
         amount = serializer.validated_data['amount']
         notes = serializer.validated_data.get('notes', '')
         
-        # تحديث الرصيد
         customer.balance += amount
         customer.save()
         
         return Response({
-            'message': f'Balance updated successfully',
+            'message': 'Balance updated successfully',
             'old_balance': customer.balance - amount,
             'new_balance': customer.balance,
             'amount': amount,
@@ -67,7 +74,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
     def top_spenders(self, request):
         """جلب العملاء الأكثر إنفاقاً"""
         customers = self.get_queryset().filter(is_active=True)
-        # ترتيب حسب الرصيد (الأعلى أولاً)
         customers = customers.order_by('-balance')
         serializer = self.get_serializer(customers[:10], many=True)
         return Response(serializer.data)
