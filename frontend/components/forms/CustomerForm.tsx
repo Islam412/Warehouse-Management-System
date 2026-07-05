@@ -17,8 +17,8 @@ interface CustomerFormProps {
 
 export function CustomerForm({ onSuccess, initialData, isEditing = false }: CustomerFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isActive, setIsActive] = useState(true);
-  const [isVip, setIsVip] = useState(false);
+  const [isActive, setIsActive] = useState<boolean>(true);
+  const [isVip, setIsVip] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     name: '',
     name_ar: '',
@@ -37,6 +37,8 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
 
   // تحميل البيانات عند التعديل
   useEffect(() => {
+    console.log('🔄 Loading customer data:', { isEditing, initialData });
+    
     if (isEditing && initialData) {
       setFormData({
         name: initialData.name || '',
@@ -52,6 +54,7 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
       });
       setIsActive(initialData.is_active !== false);
       setIsVip(initialData.is_vip || false);
+      console.log('✅ Loaded values:', { isActive: initialData.is_active, isVip: initialData.is_vip });
     } else if (!isEditing) {
       setFormData({
         name: '',
@@ -79,6 +82,7 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
     e.preventDefault();
     setIsLoading(true);
 
+    // التحقق من الحقول المطلوبة
     if (!formData.name) {
       toast.error('اسم العميل مطلوب');
       setIsLoading(false);
@@ -90,26 +94,35 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
       return;
     }
 
-    try {
-      const data = {
-        name: formData.name,
-        name_ar: formData.name_ar || '',
-        email: formData.email || '',
-        phone: formData.phone,
-        phone2: formData.phone2 || '',
-        address: formData.address || '',
-        balance: parseFloat(formData.balance) || 0,
-        credit_limit: parseFloat(formData.credit_limit) || 0,
-        tax_number: formData.tax_number || '',
-        notes: formData.notes || '',
-        is_active: isActive,
-        is_vip: isVip,
-      };
+    // تجهيز البيانات للإرسال
+    const data = {
+      name: formData.name.trim(),
+      name_ar: formData.name_ar?.trim() || '',
+      email: formData.email?.trim() || '',
+      phone: formData.phone.trim(),
+      phone2: formData.phone2?.trim() || '',
+      address: formData.address?.trim() || '',
+      balance: parseFloat(formData.balance) || 0,
+      credit_limit: parseFloat(formData.credit_limit) || 0,
+      tax_number: formData.tax_number?.trim() || '',
+      notes: formData.notes?.trim() || '',
+      is_active: isActive,
+      is_vip: isVip,
+    };
 
+    console.log('📤 Submitting data:', data);
+
+    try {
       if (isEditing && initialData) {
+        console.log('✏️ Updating customer:', initialData.id);
         await updateCustomer.mutateAsync({ id: initialData.id, data });
+        toast.success('تم تحديث العميل بنجاح');
       } else {
+        console.log('➕ Creating new customer');
         await createCustomer.mutateAsync(data);
+        toast.success('تم إضافة العميل بنجاح');
+        
+        // إعادة تعيين النموذج
         setFormData({
           name: '',
           name_ar: '',
@@ -128,6 +141,7 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
 
       onSuccess?.();
     } catch (error: any) {
+      console.error('❌ Error saving customer:', error);
       toast.error(error.response?.data?.detail || 'حدث خطأ في حفظ البيانات');
     } finally {
       setIsLoading(false);
@@ -262,19 +276,22 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
         />
       </div>
 
-      {/* استبدال الـ Switches بـ Buttons */}
+      {/* Buttons للحالة */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
         <div className="space-y-2">
-          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">نشط</Label>
+          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">الحالة</Label>
           <div className="flex gap-2">
             <Button
               type="button"
               variant={isActive ? "default" : "outline"}
               className={cn(
-                "flex-1",
-                isActive && "bg-green-600 hover:bg-green-700"
+                "flex-1 transition-all",
+                isActive && "bg-green-600 hover:bg-green-700 text-white"
               )}
-              onClick={() => setIsActive(true)}
+              onClick={() => {
+                console.log('🔄 Setting isActive to:', true);
+                setIsActive(true);
+              }}
             >
               <Check className="w-4 h-4 ml-1" />
               نشط
@@ -283,45 +300,60 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
               type="button"
               variant={!isActive ? "default" : "outline"}
               className={cn(
-                "flex-1",
-                !isActive && "bg-red-600 hover:bg-red-700"
+                "flex-1 transition-all",
+                !isActive && "bg-red-600 hover:bg-red-700 text-white"
               )}
-              onClick={() => setIsActive(false)}
+              onClick={() => {
+                console.log('🔄 Setting isActive to:', false);
+                setIsActive(false);
+              }}
             >
               <X className="w-4 h-4 ml-1" />
               غير نشط
             </Button>
           </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            الحالية: {isActive ? '✅ نشط' : '❌ غير نشط'}
+          </p>
         </div>
 
         <div className="space-y-2">
-          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">عميل مميز (VIP)</Label>
+          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">نوع العميل</Label>
           <div className="flex gap-2">
             <Button
               type="button"
               variant={isVip ? "default" : "outline"}
               className={cn(
-                "flex-1",
-                isVip && "bg-amber-500 hover:bg-amber-600"
+                "flex-1 transition-all",
+                isVip && "bg-amber-500 hover:bg-amber-600 text-white"
               )}
-              onClick={() => setIsVip(true)}
+              onClick={() => {
+                console.log('🔄 Setting isVip to:', true);
+                setIsVip(true);
+              }}
             >
               <Check className="w-4 h-4 ml-1" />
-              مميز
+              مميز (VIP)
             </Button>
             <Button
               type="button"
               variant={!isVip ? "default" : "outline"}
               className={cn(
-                "flex-1",
-                !isVip && "bg-gray-500 hover:bg-gray-600"
+                "flex-1 transition-all",
+                !isVip && "bg-gray-500 hover:bg-gray-600 text-white"
               )}
-              onClick={() => setIsVip(false)}
+              onClick={() => {
+                console.log('🔄 Setting isVip to:', false);
+                setIsVip(false);
+              }}
             >
               <X className="w-4 h-4 ml-1" />
               عادي
             </Button>
           </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            الحالية: {isVip ? '⭐ مميز (VIP)' : '📋 عادي'}
+          </p>
         </div>
       </div>
 

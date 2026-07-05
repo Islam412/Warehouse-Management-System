@@ -61,11 +61,11 @@ export default function CustomersPage() {
                      customersData?.data ? (Array.isArray(customersData.data) ? customersData.data : []) :
                      [];
 
-  // دالة لتحديث حالة العميل (نشط/غير نشط) - من الجدول مباشرة
+  // دالة لتحديث حالة العميل (نشط/غير نشط)
   const handleToggleActive = async (customer: any) => {
     setUpdatingId(customer.id);
     const newValue = !customer.is_active;
-    console.log(`Toggling active for ${customer.name} to:`, newValue);
+    console.log(`🔄 Toggling active for ${customer.name} to:`, newValue);
     
     try {
       const response = await fetch(`http://localhost:8000/api/v1/customers/api/customers/${customer.id}/`, {
@@ -91,11 +91,11 @@ export default function CustomersPage() {
     }
   };
 
-  // دالة لتحديث حالة VIP - من الجدول مباشرة
+  // دالة لتحديث حالة VIP
   const handleToggleVIP = async (customer: any) => {
     setUpdatingId(customer.id);
     const newValue = !customer.is_vip;
-    console.log(`Toggling VIP for ${customer.name} to:`, newValue);
+    console.log(`🔄 Toggling VIP for ${customer.name} to:`, newValue);
     
     try {
       const response = await fetch(`http://localhost:8000/api/v1/customers/api/customers/${customer.id}/`, {
@@ -135,9 +135,9 @@ export default function CustomersPage() {
   };
 
   const openEditDialog = (customer: any) => {
-    console.log('Opening edit for customer:', customer);
-    console.log('is_active:', customer.is_active);
-    console.log('is_vip:', customer.is_vip);
+    console.log('✏️ Opening edit for customer:', customer);
+    console.log('  - is_active:', customer.is_active);
+    console.log('  - is_vip:', customer.is_vip);
     setCustomerToEdit(customer);
     setEditKey(prev => prev + 1);
     setIsEditDialogOpen(true);
