@@ -37,10 +37,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit, Trash2, Loader2, Users, Star } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CustomerForm } from '@/components/forms/CustomerForm';
+import { toast } from 'sonner';
 
 export default function CustomersPage() {
   const [search, setSearch] = useState('');
@@ -49,6 +50,8 @@ export default function CustomersPage() {
   const [customerToDelete, setCustomerToDelete] = useState<any>(null);
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [editKey, setEditKey] = useState(0);
 
   const { data: customersData, isLoading, error, refetch } = useCustomers({ search });
   const deleteCustomer = useDeleteCustomer();
@@ -57,6 +60,66 @@ export default function CustomersPage() {
                      customersData?.results ? customersData.results : 
                      customersData?.data ? (Array.isArray(customersData.data) ? customersData.data : []) :
                      [];
+
+  // دالة لتحديث حالة العميل (نشط/غير نشط) - من الجدول مباشرة
+  const handleToggleActive = async (customer: any) => {
+    setUpdatingId(customer.id);
+    const newValue = !customer.is_active;
+    console.log(`Toggling active for ${customer.name} to:`, newValue);
+    
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/customers/api/customers/${customer.id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+        body: JSON.stringify({ is_active: newValue }),
+      });
+
+      if (response.ok) {
+        toast.success(`تم ${newValue ? 'تفعيل' : 'إلغاء تفعيل'} العميل بنجاح`);
+        refetch();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData?.detail || 'حدث خطأ في تحديث حالة العميل');
+      }
+    } catch (error) {
+      toast.error('حدث خطأ في الاتصال بالخادم');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // دالة لتحديث حالة VIP - من الجدول مباشرة
+  const handleToggleVIP = async (customer: any) => {
+    setUpdatingId(customer.id);
+    const newValue = !customer.is_vip;
+    console.log(`Toggling VIP for ${customer.name} to:`, newValue);
+    
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/customers/api/customers/${customer.id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        },
+        body: JSON.stringify({ is_vip: newValue }),
+      });
+
+      if (response.ok) {
+        toast.success(`تم ${newValue ? 'تفعيل' : 'إلغاء'} حالة VIP للعميل بنجاح`);
+        refetch();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData?.detail || 'حدث خطأ في تحديث حالة VIP');
+      }
+    } catch (error) {
+      toast.error('حدث خطأ في الاتصال بالخادم');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const handleDelete = async () => {
     if (!customerToDelete) return;
@@ -72,7 +135,11 @@ export default function CustomersPage() {
   };
 
   const openEditDialog = (customer: any) => {
+    console.log('Opening edit for customer:', customer);
+    console.log('is_active:', customer.is_active);
+    console.log('is_vip:', customer.is_vip);
     setCustomerToEdit(customer);
+    setEditKey(prev => prev + 1);
     setIsEditDialogOpen(true);
   };
 
@@ -157,8 +224,8 @@ export default function CustomersPage() {
                 <TableHead>الهاتف</TableHead>
                 <TableHead>البريد الإلكتروني</TableHead>
                 <TableHead>الرصيد</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead>مميز</TableHead>
+                <TableHead>نشط</TableHead>
+                <TableHead>VIP</TableHead>
                 <TableHead className="text-left">الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
@@ -185,19 +252,18 @@ export default function CustomersPage() {
                       {customer.balance || 0} ج.م
                     </TableCell>
                     <TableCell>
-                      <Badge variant={customer.is_active ? 'default' : 'destructive'}>
-                        {customer.is_active ? 'نشط' : 'غير نشط'}
-                      </Badge>
+                      <Switch
+                        checked={customer.is_active !== false}
+                        onCheckedChange={() => handleToggleActive(customer)}
+                        disabled={updatingId === customer.id}
+                      />
                     </TableCell>
                     <TableCell>
-                      {customer.is_vip ? (
-                        <Badge variant="default" className="bg-amber-500 hover:bg-amber-600">
-                          <Star className="w-3 h-3 ml-1" />
-                          مميز
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">عادي</Badge>
-                      )}
+                      <Switch
+                        checked={customer.is_vip || false}
+                        onCheckedChange={() => handleToggleVIP(customer)}
+                        disabled={updatingId === customer.id}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -255,7 +321,15 @@ export default function CustomersPage() {
       </AlertDialog>
 
       {/* Dialog للتعديل */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog 
+        open={isEditDialogOpen} 
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setCustomerToEdit(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>تعديل العميل</DialogTitle>
@@ -265,6 +339,7 @@ export default function CustomersPage() {
           </DialogHeader>
           {customerToEdit && (
             <CustomerForm 
+              key={editKey}
               initialData={customerToEdit}
               isEditing={true}
               onSuccess={() => {

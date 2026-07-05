@@ -5,9 +5,9 @@ import { useCreateCustomer, useUpdateCustomer } from '@/hooks/useCustomers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface CustomerFormProps {
   onSuccess?: () => void;
@@ -17,6 +17,8 @@ interface CustomerFormProps {
 
 export function CustomerForm({ onSuccess, initialData, isEditing = false }: CustomerFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isActive, setIsActive] = useState(true);
+  const [isVip, setIsVip] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     name_ar: '',
@@ -28,15 +30,14 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
     credit_limit: '',
     tax_number: '',
     notes: '',
-    is_active: true,
-    is_vip: false,
   });
 
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
 
+  // تحميل البيانات عند التعديل
   useEffect(() => {
-    if (initialData && isEditing) {
+    if (isEditing && initialData) {
       setFormData({
         name: initialData.name || '',
         name_ar: initialData.name_ar || '',
@@ -48,19 +49,30 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
         credit_limit: initialData.credit_limit?.toString() || '',
         tax_number: initialData.tax_number || '',
         notes: initialData.notes || '',
-        is_active: initialData.is_active !== false,
-        is_vip: initialData.is_vip || false,
       });
+      setIsActive(initialData.is_active !== false);
+      setIsVip(initialData.is_vip || false);
+    } else if (!isEditing) {
+      setFormData({
+        name: '',
+        name_ar: '',
+        email: '',
+        phone: '',
+        phone2: '',
+        address: '',
+        balance: '',
+        credit_limit: '',
+        tax_number: '',
+        notes: '',
+      });
+      setIsActive(true);
+      setIsVip(false);
     }
   }, [initialData, isEditing]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSwitchChange = (name: string, checked: boolean) => {
-    setFormData((prev) => ({ ...prev, [name]: checked }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,34 +102,33 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
         credit_limit: parseFloat(formData.credit_limit) || 0,
         tax_number: formData.tax_number || '',
         notes: formData.notes || '',
-        is_active: formData.is_active,
-        is_vip: formData.is_vip,
+        is_active: isActive,
+        is_vip: isVip,
       };
 
       if (isEditing && initialData) {
         await updateCustomer.mutateAsync({ id: initialData.id, data });
       } else {
         await createCustomer.mutateAsync(data);
+        setFormData({
+          name: '',
+          name_ar: '',
+          email: '',
+          phone: '',
+          phone2: '',
+          address: '',
+          balance: '',
+          credit_limit: '',
+          tax_number: '',
+          notes: '',
+        });
+        setIsActive(true);
+        setIsVip(false);
       }
 
-      setFormData({
-        name: '',
-        name_ar: '',
-        email: '',
-        phone: '',
-        phone2: '',
-        address: '',
-        balance: '',
-        credit_limit: '',
-        tax_number: '',
-        notes: '',
-        is_active: true,
-        is_vip: false,
-      });
-
       onSuccess?.();
-    } catch (error) {
-      console.error('Error saving customer:', error);
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'حدث خطأ في حفظ البيانات');
     } finally {
       setIsLoading(false);
     }
@@ -251,21 +262,66 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
         />
       </div>
 
+      {/* استبدال الـ Switches بـ Buttons */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <Label>نشط</Label>
-          <Switch
-            checked={formData.is_active}
-            onCheckedChange={(checked) => handleSwitchChange('is_active', checked)}
-          />
+        <div className="space-y-2">
+          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">نشط</Label>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={isActive ? "default" : "outline"}
+              className={cn(
+                "flex-1",
+                isActive && "bg-green-600 hover:bg-green-700"
+              )}
+              onClick={() => setIsActive(true)}
+            >
+              <Check className="w-4 h-4 ml-1" />
+              نشط
+            </Button>
+            <Button
+              type="button"
+              variant={!isActive ? "default" : "outline"}
+              className={cn(
+                "flex-1",
+                !isActive && "bg-red-600 hover:bg-red-700"
+              )}
+              onClick={() => setIsActive(false)}
+            >
+              <X className="w-4 h-4 ml-1" />
+              غير نشط
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <Label>عميل مميز (VIP)</Label>
-          <Switch
-            checked={formData.is_vip}
-            onCheckedChange={(checked) => handleSwitchChange('is_vip', checked)}
-          />
+        <div className="space-y-2">
+          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">عميل مميز (VIP)</Label>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={isVip ? "default" : "outline"}
+              className={cn(
+                "flex-1",
+                isVip && "bg-amber-500 hover:bg-amber-600"
+              )}
+              onClick={() => setIsVip(true)}
+            >
+              <Check className="w-4 h-4 ml-1" />
+              مميز
+            </Button>
+            <Button
+              type="button"
+              variant={!isVip ? "default" : "outline"}
+              className={cn(
+                "flex-1",
+                !isVip && "bg-gray-500 hover:bg-gray-600"
+              )}
+              onClick={() => setIsVip(false)}
+            >
+              <X className="w-4 h-4 ml-1" />
+              عادي
+            </Button>
+          </div>
         </div>
       </div>
 
