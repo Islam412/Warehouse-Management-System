@@ -37,8 +37,6 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
 
   // تحميل البيانات عند التعديل
   useEffect(() => {
-    console.log('🔄 Loading customer data:', { isEditing, initialData });
-    
     if (isEditing && initialData) {
       setFormData({
         name: initialData.name || '',
@@ -54,7 +52,6 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
       });
       setIsActive(initialData.is_active !== false);
       setIsVip(initialData.is_vip || false);
-      console.log('✅ Loaded values:', { isActive: initialData.is_active, isVip: initialData.is_vip });
     } else if (!isEditing) {
       setFormData({
         name: '',
@@ -94,6 +91,31 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
       return;
     }
 
+    // التحقق من الأرقام
+    const balance = parseFloat(formData.balance) || 0;
+    const creditLimit = parseFloat(formData.credit_limit) || 0;
+
+    // الحد الأقصى للأرقام
+    const MAX_VALUE = 9999999999.99;
+
+    if (balance > MAX_VALUE) {
+      toast.error(`الرصيد لا يمكن أن يتجاوز ${MAX_VALUE.toLocaleString()}`);
+      setIsLoading(false);
+      return;
+    }
+
+    if (creditLimit > MAX_VALUE) {
+      toast.error(`حد الائتمان لا يمكن أن يتجاوز ${MAX_VALUE.toLocaleString()}`);
+      setIsLoading(false);
+      return;
+    }
+
+    if (creditLimit < 0) {
+      toast.error('حد الائتمان لا يمكن أن يكون سالباً');
+      setIsLoading(false);
+      return;
+    }
+
     // تجهيز البيانات للإرسال
     const data = {
       name: formData.name.trim(),
@@ -102,8 +124,8 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
       phone: formData.phone.trim(),
       phone2: formData.phone2?.trim() || '',
       address: formData.address?.trim() || '',
-      balance: parseFloat(formData.balance) || 0,
-      credit_limit: parseFloat(formData.credit_limit) || 0,
+      balance: balance,
+      credit_limit: creditLimit,
       tax_number: formData.tax_number?.trim() || '',
       notes: formData.notes?.trim() || '',
       is_active: isActive,
@@ -114,14 +136,9 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
 
     try {
       if (isEditing && initialData) {
-        console.log('✏️ Updating customer:', initialData.id);
         await updateCustomer.mutateAsync({ id: initialData.id, data });
-        toast.success('تم تحديث العميل بنجاح');
       } else {
-        console.log('➕ Creating new customer');
         await createCustomer.mutateAsync(data);
-        toast.success('تم إضافة العميل بنجاح');
-        
         // إعادة تعيين النموذج
         setFormData({
           name: '',
@@ -142,7 +159,18 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
       onSuccess?.();
     } catch (error: any) {
       console.error('❌ Error saving customer:', error);
-      toast.error(error.response?.data?.detail || 'حدث خطأ في حفظ البيانات');
+      console.error('❌ Error details:', error.response?.data);
+      
+      // عرض رسالة خطأ مفصلة
+      const errorData = error.response?.data;
+      if (errorData) {
+        const messages = Object.entries(errorData)
+          .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+          .join('\n');
+        toast.error(`خطأ في البيانات:\n${messages}`);
+      } else {
+        toast.error('حدث خطأ في حفظ البيانات');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -233,10 +261,13 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
             name="balance"
             type="number"
             step="0.01"
+            min="-9999999999.99"
+            max="9999999999.99"
             value={formData.balance}
             onChange={handleChange}
             placeholder="0.00"
           />
+          <p className="text-xs text-gray-400">القيمة القصوى: 9,999,999,999.99</p>
         </div>
 
         <div className="space-y-2">
@@ -246,10 +277,13 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
             name="credit_limit"
             type="number"
             step="0.01"
+            min="0"
+            max="9999999999.99"
             value={formData.credit_limit}
             onChange={handleChange}
             placeholder="1000.00"
           />
+          <p className="text-xs text-gray-400">القيمة القصوى: 9,999,999,999.99</p>
         </div>
       </div>
 
@@ -276,7 +310,6 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
         />
       </div>
 
-      {/* Buttons للحالة */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
         <div className="space-y-2">
           <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">الحالة</Label>
@@ -288,10 +321,7 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
                 "flex-1 transition-all",
                 isActive && "bg-green-600 hover:bg-green-700 text-white"
               )}
-              onClick={() => {
-                console.log('🔄 Setting isActive to:', true);
-                setIsActive(true);
-              }}
+              onClick={() => setIsActive(true)}
             >
               <Check className="w-4 h-4 ml-1" />
               نشط
@@ -303,18 +333,12 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
                 "flex-1 transition-all",
                 !isActive && "bg-red-600 hover:bg-red-700 text-white"
               )}
-              onClick={() => {
-                console.log('🔄 Setting isActive to:', false);
-                setIsActive(false);
-              }}
+              onClick={() => setIsActive(false)}
             >
               <X className="w-4 h-4 ml-1" />
               غير نشط
             </Button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            الحالية: {isActive ? '✅ نشط' : '❌ غير نشط'}
-          </p>
         </div>
 
         <div className="space-y-2">
@@ -327,10 +351,7 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
                 "flex-1 transition-all",
                 isVip && "bg-amber-500 hover:bg-amber-600 text-white"
               )}
-              onClick={() => {
-                console.log('🔄 Setting isVip to:', true);
-                setIsVip(true);
-              }}
+              onClick={() => setIsVip(true)}
             >
               <Check className="w-4 h-4 ml-1" />
               مميز (VIP)
@@ -342,18 +363,12 @@ export function CustomerForm({ onSuccess, initialData, isEditing = false }: Cust
                 "flex-1 transition-all",
                 !isVip && "bg-gray-500 hover:bg-gray-600 text-white"
               )}
-              onClick={() => {
-                console.log('🔄 Setting isVip to:', false);
-                setIsVip(false);
-              }}
+              onClick={() => setIsVip(false)}
             >
               <X className="w-4 h-4 ml-1" />
               عادي
             </Button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            الحالية: {isVip ? '⭐ مميز (VIP)' : '📋 عادي'}
-          </p>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCustomers, useDeleteCustomer } from '@/hooks/useCustomers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CustomerForm } from '@/components/forms/CustomerForm';
 import { toast } from 'sonner';
@@ -56,6 +56,11 @@ export default function CustomersPage() {
   const { data: customersData, isLoading, error, refetch } = useCustomers({ search });
   const deleteCustomer = useDeleteCustomer();
 
+  // Log البيانات عند التحميل
+  useEffect(() => {
+    console.log('📊 Customers data updated:', customersData);
+  }, [customersData]);
+
   const customers = Array.isArray(customersData) ? customersData : 
                      customersData?.results ? customersData.results : 
                      customersData?.data ? (Array.isArray(customersData.data) ? customersData.data : []) :
@@ -65,7 +70,7 @@ export default function CustomersPage() {
   const handleToggleActive = async (customer: any) => {
     setUpdatingId(customer.id);
     const newValue = !customer.is_active;
-    console.log(`🔄 Toggling active for ${customer.name} to:`, newValue);
+    console.log(`🔄 Toggling active for ${customer.name} from ${customer.is_active} to:`, newValue);
     
     try {
       const response = await fetch(`http://localhost:8000/api/v1/customers/api/customers/${customer.id}/`, {
@@ -78,13 +83,18 @@ export default function CustomersPage() {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Active status updated:', data);
         toast.success(`تم ${newValue ? 'تفعيل' : 'إلغاء تفعيل'} العميل بنجاح`);
-        refetch();
+        // إعادة تحميل البيانات
+        await refetch();
       } else {
         const errorData = await response.json();
+        console.error('❌ Error updating active status:', errorData);
         toast.error(errorData?.detail || 'حدث خطأ في تحديث حالة العميل');
       }
     } catch (error) {
+      console.error('❌ Network error:', error);
       toast.error('حدث خطأ في الاتصال بالخادم');
     } finally {
       setUpdatingId(null);
@@ -95,7 +105,7 @@ export default function CustomersPage() {
   const handleToggleVIP = async (customer: any) => {
     setUpdatingId(customer.id);
     const newValue = !customer.is_vip;
-    console.log(`🔄 Toggling VIP for ${customer.name} to:`, newValue);
+    console.log(`🔄 Toggling VIP for ${customer.name} from ${customer.is_vip} to:`, newValue);
     
     try {
       const response = await fetch(`http://localhost:8000/api/v1/customers/api/customers/${customer.id}/`, {
@@ -108,13 +118,18 @@ export default function CustomersPage() {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        console.log('✅ VIP status updated:', data);
         toast.success(`تم ${newValue ? 'تفعيل' : 'إلغاء'} حالة VIP للعميل بنجاح`);
-        refetch();
+        // إعادة تحميل البيانات
+        await refetch();
       } else {
         const errorData = await response.json();
+        console.error('❌ Error updating VIP status:', errorData);
         toast.error(errorData?.detail || 'حدث خطأ في تحديث حالة VIP');
       }
     } catch (error) {
+      console.error('❌ Network error:', error);
       toast.error('حدث خطأ في الاتصال بالخادم');
     } finally {
       setUpdatingId(null);
@@ -126,7 +141,7 @@ export default function CustomersPage() {
     await deleteCustomer.mutateAsync(customerToDelete.id);
     setDeleteDialogOpen(false);
     setCustomerToDelete(null);
-    refetch();
+    await refetch();
   };
 
   const openDeleteDialog = (customer: any) => {
@@ -143,6 +158,13 @@ export default function CustomersPage() {
     setIsEditDialogOpen(true);
   };
 
+  // دالة لإعادة التحميل اليدوية
+  const handleRefresh = async () => {
+    console.log('🔄 Manual refresh requested');
+    await refetch();
+    toast.info('تم تحديث البيانات');
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -156,7 +178,7 @@ export default function CustomersPage() {
       <div className="text-center py-12">
         <h3 className="text-lg font-semibold text-red-600">حدث خطأ في تحميل العملاء</h3>
         <p className="text-gray-500">يرجى المحاولة مرة أخرى</p>
-        <Button onClick={() => refetch()} className="mt-4">إعادة المحاولة</Button>
+        <Button onClick={handleRefresh} className="mt-4">إعادة المحاولة</Button>
       </div>
     );
   }
@@ -171,28 +193,40 @@ export default function CustomersPage() {
             إدارة جميع العملاء في المتجر
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              إضافة عميل
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle>إضافة عميل جديد</DialogTitle>
-              <DialogDescription>
-                أدخل معلومات العميل الجديد
-              </DialogDescription>
-            </DialogHeader>
-            <CustomerForm 
-              onSuccess={() => {
-                setIsCreateDialogOpen(false);
-                refetch();
-              }} 
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            className="gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            تحديث
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="w-4 h-4" />
+                إضافة عميل
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh]">
+              <DialogHeader>
+                <DialogTitle>إضافة عميل جديد</DialogTitle>
+                <DialogDescription>
+                  أدخل معلومات العميل الجديد
+                </DialogDescription>
+              </DialogHeader>
+              <CustomerForm 
+                onSuccess={async () => {
+                  setIsCreateDialogOpen(false);
+                  await refetch();
+                  toast.success('تم إضافة العميل بنجاح');
+                }} 
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* البحث */}
@@ -206,6 +240,9 @@ export default function CustomersPage() {
             className="pr-9"
           />
         </div>
+        <span className="text-sm text-gray-500">
+          {customers.length} عميل
+        </span>
       </div>
 
       {/* جدول العملاء */}
@@ -342,10 +379,11 @@ export default function CustomersPage() {
               key={editKey}
               initialData={customerToEdit}
               isEditing={true}
-              onSuccess={() => {
+              onSuccess={async () => {
                 setIsEditDialogOpen(false);
                 setCustomerToEdit(null);
-                refetch();
+                await refetch();
+                toast.success('تم تحديث العميل بنجاح');
               }} 
             />
           )}
