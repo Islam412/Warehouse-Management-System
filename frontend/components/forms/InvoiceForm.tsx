@@ -15,9 +15,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Plus, Trash2, Printer, Eye } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 interface InvoiceFormProps {
   onSuccess?: () => void;
@@ -39,6 +38,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     discount: 0,
     tax: 0,
     notes: '',
+    status: 'confirmed', // الحالة الافتراضية
   });
   const [items, setItems] = useState<InvoiceItem[]>([
     { product: '', quantity: 1, unit_price: 0, discount: 0, tax: 0 },
@@ -46,7 +46,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
 
   const createInvoice = useCreateInvoice();
   const { data: customersData, isLoading: customersLoading } = useCustomers();
-  const { data: productsData, isLoading: productsLoading } = useProducts();
+  const { data: productsData, isLoading: productsLoading, refetch: refetchProducts } = useProducts();
 
   const customers = Array.isArray(customersData) ? customersData : 
                      customersData?.results ? customersData.results : [];
@@ -54,7 +54,13 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   const products = Array.isArray(productsData) ? productsData : 
                      productsData?.results ? productsData.results : [];
 
+  // جلب المنتجات مرة أخرى للتأكد
+  useEffect(() => {
+    refetchProducts();
+  }, []);
+
   console.log('📦 Products in form:', products);
+  console.log('📦 Products data raw:', productsData);
 
   const addItem = () => {
     setItems([...items, { product: '', quantity: 1, unit_price: 0, discount: 0, tax: 0 }]);
@@ -91,6 +97,8 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     e.preventDefault();
     setIsLoading(true);
 
+    console.log('📤 Form data before submit:', { formData, items });
+
     if (!formData.customer) {
       toast.error('العميل مطلوب');
       setIsLoading(false);
@@ -116,6 +124,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       discount: formData.discount || 0,
       tax: formData.tax || 0,
       notes: formData.notes || '',
+      status: formData.status || 'confirmed',
       items: validItems.map(item => ({
         product: item.product,
         quantity: item.quantity,
@@ -125,22 +134,28 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       })),
     };
 
-    console.log('📤 Creating invoice:', data);
+    console.log('📤 Creating invoice with status:', data.status);
+    console.log('📤 Full invoice data:', data);
 
     try {
-      await createInvoice.mutateAsync(data);
+      const result = await createInvoice.mutateAsync(data);
+      console.log('✅ Invoice created:', result);
+      
       setFormData({
         customer: '',
         due_date: '',
         discount: 0,
         tax: 0,
         notes: '',
+        status: 'confirmed',
       });
       setItems([{ product: '', quantity: 1, unit_price: 0, discount: 0, tax: 0 }]);
       toast.success('تم إنشاء الفاتورة بنجاح! 🎉');
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error creating invoice:', error);
+      console.error('❌ Error response:', error.response?.data);
+      toast.error(error.response?.data?.detail || 'حدث خطأ في إنشاء الفاتورة');
     } finally {
       setIsLoading(false);
     }
@@ -201,6 +216,30 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         </CardContent>
       </Card>
 
+      {/* حالة الفاتورة */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">حالة الفاتورة</Label>
+            <Select 
+              value={formData.status} 
+              onValueChange={(value) => setFormData({ ...formData, status: value })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="اختر الحالة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">مسودة</SelectItem>
+                <SelectItem value="confirmed">مؤكدة</SelectItem>
+                <SelectItem value="paid">مدفوعة</SelectItem>
+                <SelectItem value="partially_paid">مدفوعة جزئياً</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">اختر حالة الفاتورة (مسودة، مؤكدة، مدفوعة، مدفوعة جزئياً)</p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* بنود الفاتورة */}
       <Card>
         <CardContent className="pt-6">
@@ -211,6 +250,14 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
               إضافة بند
             </Button>
           </div>
+
+          {products.length === 0 && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-3">
+              <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                ⚠️ لا توجد منتجات. يرجى إضافة منتجات أولاً من صفحة المنتجات.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-3">
             {items.map((item, index) => (
