@@ -110,7 +110,6 @@ export default function SalesPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* الرأس */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">المبيعات</h1>
@@ -132,7 +131,7 @@ export default function SalesPage() {
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>إنشاء فاتورة جديدة</DialogTitle>
+                <DialogTitle className="text-2xl">إنشاء فاتورة جديدة</DialogTitle>
                 <DialogDescription>
                   أدخل بيانات الفاتورة والمنتجات
                 </DialogDescription>
@@ -148,7 +147,6 @@ export default function SalesPage() {
         </div>
       </div>
 
-      {/* البحث */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -162,7 +160,6 @@ export default function SalesPage() {
         <span className="text-sm text-gray-500">{invoices.length} فاتورة</span>
       </div>
 
-      {/* جدول الفواتير */}
       <Card>
         <CardHeader>
           <CardTitle>قائمة الفواتير</CardTitle>
@@ -200,7 +197,7 @@ export default function SalesPage() {
                     className="border-b border-gray-100 dark:border-gray-800"
                   >
                     <TableCell className="font-medium">{invoice.invoice_number || '-'}</TableCell>
-                    <TableCell>{invoice.customer_name || '-'}</TableCell>
+                    <TableCell>{invoice.customer_name || invoice.customer?.name || '-'}</TableCell>
                     <TableCell>{invoice.date ? new Date(invoice.date).toLocaleDateString('ar-EG') : '-'}</TableCell>
                     <TableCell className="font-bold">{invoice.total || 0} ج.م</TableCell>
                     <TableCell>{invoice.paid_amount || 0} ج.م</TableCell>
@@ -210,14 +207,14 @@ export default function SalesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <Link href={`/invoice/${invoice.id}`} target="_blank">
-                          <Button variant="ghost" size="icon" className="text-blue-500 hover:text-blue-600">
+                          <Button variant="ghost" size="icon" className="text-blue-500 hover:text-blue-600" title="طباعة">
                             <Printer className="w-4 h-4" />
                           </Button>
                         </Link>
                         <Link href={`/invoice/${invoice.id}`}>
-                          <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600">
+                          <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" title="عرض">
                             <Eye className="w-4 h-4" />
                           </Button>
                         </Link>
@@ -226,6 +223,7 @@ export default function SalesPage() {
                           size="icon" 
                           className="text-red-500 hover:text-red-600"
                           onClick={() => openDeleteDialog(invoice)}
+                          title="حذف"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -239,7 +237,6 @@ export default function SalesPage() {
         </CardContent>
       </Card>
 
-      {/* Alert Dialog للتأكيد على الحذف */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
