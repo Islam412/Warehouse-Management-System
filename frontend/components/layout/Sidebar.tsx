@@ -33,27 +33,21 @@ const menuItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-
-  // استخراج المسار بدون اللغة
   const path = pathname?.replace(/^\/(ar|en)/, '') || '/';
 
   return (
     <aside className="fixed right-0 top-0 z-40 h-screen w-64 border-l bg-background">
       <div className="flex h-full flex-col">
-        {/* الشعار */}
         <div className="flex h-16 items-center border-b px-6">
           <Link href="/dashboard" className="text-xl font-bold text-primary">
             DUKA
           </Link>
         </div>
-
-        {/* القائمة */}
         <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-1">
             {menuItems.map((item) => {
               const isActive = path === item.href || path.startsWith(item.href + '/');
               const Icon = item.icon;
-
               return (
                 <li key={item.href}>
                   <Link
@@ -73,8 +67,6 @@ export function Sidebar() {
             })}
           </ul>
         </nav>
-
-        {/* زر الخروج */}
         <div className="border-t p-4">
           <button
             onClick={() => {
