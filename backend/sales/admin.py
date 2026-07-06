@@ -9,6 +9,7 @@ class InvoiceItemInline(admin.TabularInline):
     extra = 1
     fields = ['product', 'quantity', 'unit_price', 'total']
     readonly_fields = ['total']
+    can_delete = False  # منع الحذف من الـ inline
 
 class PaymentInline(admin.TabularInline):
     """عرض المدفوعات داخل الفاتورة"""
@@ -17,6 +18,7 @@ class PaymentInline(admin.TabularInline):
     fields = ['amount', 'payment_method', 'reference', 'created_at']
     readonly_fields = ['created_at']
     max_num = 10
+    can_delete = False  # منع الحذف من الـ inline
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
