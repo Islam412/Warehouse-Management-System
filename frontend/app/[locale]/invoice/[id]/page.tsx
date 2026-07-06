@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useInvoice } from '@/hooks/useSales';
 import { Printer, ArrowLeft, Loader2 } from 'lucide-react';
@@ -10,16 +9,20 @@ import { Badge } from '@/components/ui/badge';
 export default function InvoicePrintPage() {
   const params = useParams();
   const id = params?.id as string;
-  const [isPrinting, setIsPrinting] = useState(false);
 
   const { data: invoice, isLoading, error } = useInvoice(id);
 
+  // دالة مساعدة لتحويل الأرقام
+  const toNumber = (value: any): number => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') return parseFloat(value) || 0;
+    return 0;
+  };
+
   const handlePrint = () => {
-    setIsPrinting(true);
     setTimeout(() => {
       window.print();
-      setIsPrinting(false);
-    }, 500);
+    }, 300);
   };
 
   if (isLoading) {
@@ -70,16 +73,16 @@ export default function InvoicePrintPage() {
           </div>
           <div className="text-left">
             <p className="text-sm text-gray-500">التاريخ</p>
-            <p className="font-bold">{new Date(invoice.date).toLocaleDateString('ar-EG')}</p>
+            <p className="font-bold">{invoice.date ? new Date(invoice.date).toLocaleDateString('ar-EG') : '-'}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">العميل</p>
-            <p className="font-bold">{invoice.customer_name}</p>
-            <p className="text-sm text-gray-500">{invoice.customer_phone}</p>
+            <p className="font-bold">{invoice.customer_name || invoice.customer?.name || '-'}</p>
+            <p className="text-sm text-gray-500">{invoice.customer_phone || invoice.customer?.phone || ''}</p>
           </div>
           <div className="text-left">
             <p className="text-sm text-gray-500">تاريخ الاستحقاق</p>
-            <p className="font-bold">{new Date(invoice.due_date).toLocaleDateString('ar-EG')}</p>
+            <p className="font-bold">{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('ar-EG') : '-'}</p>
           </div>
         </div>
 
@@ -92,7 +95,7 @@ export default function InvoicePrintPage() {
             invoice.status === 'confirmed' ? 'bg-blue-500' :
             invoice.status === 'cancelled' ? 'bg-red-500' : 'bg-gray-500'
           }>
-            {invoice.status_display || invoice.status}
+            {invoice.status_display || invoice.status || 'غير معروف'}
           </Badge>
         </div>
 
@@ -109,16 +112,29 @@ export default function InvoicePrintPage() {
             </tr>
           </thead>
           <tbody>
-            {invoice.items?.map((item: any, index: number) => (
-              <tr key={index} className="border-b border-gray-100">
-                <td className="py-2 text-sm">{index + 1}</td>
-                <td className="py-2 text-sm">{item.product_name}</td>
-                <td className="py-2 text-sm text-center">{item.quantity}</td>
-                <td className="py-2 text-sm text-center">{item.unit_price.toFixed(2)}</td>
-                <td className="py-2 text-sm text-center">{item.discount?.toFixed(2) || '0.00'}</td>
-                <td className="py-2 text-sm text-left font-bold">{item.total.toFixed(2)} ج.م</td>
+            {invoice.items && invoice.items.length > 0 ? (
+              invoice.items.map((item: any, index: number) => {
+                const quantity = toNumber(item.quantity);
+                const unitPrice = toNumber(item.unit_price);
+                const discount = toNumber(item.discount);
+                const total = toNumber(item.total);
+                
+                return (
+                  <tr key={index} className="border-b border-gray-100">
+                    <td className="py-2 text-sm">{index + 1}</td>
+                    <td className="py-2 text-sm">{item.product_name || item.product?.name || 'غير معروف'}</td>
+                    <td className="py-2 text-sm text-center">{quantity}</td>
+                    <td className="py-2 text-sm text-center">{unitPrice.toFixed(2)}</td>
+                    <td className="py-2 text-sm text-center">{discount.toFixed(2)}</td>
+                    <td className="py-2 text-sm text-left font-bold">{total.toFixed(2)} ج.م</td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={6} className="text-center py-4 text-gray-500">لا توجد بنود</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
 
@@ -128,27 +144,27 @@ export default function InvoicePrintPage() {
             <div className="w-64 space-y-1">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">المجموع الفرعي</span>
-                <span className="font-bold">{invoice.subtotal?.toFixed(2) || '0.00'} ج.م</span>
+                <span className="font-bold">{toNumber(invoice.subtotal).toFixed(2)} ج.م</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">الخصم</span>
-                <span className="font-bold text-red-500">-{invoice.discount?.toFixed(2) || '0.00'} ج.م</span>
+                <span className="font-bold text-red-500">-{toNumber(invoice.discount).toFixed(2)} ج.م</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">الضريبة</span>
-                <span className="font-bold">+{invoice.tax?.toFixed(2) || '0.00'} ج.م</span>
+                <span className="font-bold">+{toNumber(invoice.tax).toFixed(2)} ج.م</span>
               </div>
               <div className="flex justify-between border-t-2 border-gray-300 pt-2">
                 <span className="text-lg font-bold">الإجمالي</span>
-                <span className="text-2xl font-bold text-blue-600">{invoice.total?.toFixed(2) || '0.00'} ج.م</span>
+                <span className="text-2xl font-bold text-blue-600">{toNumber(invoice.total).toFixed(2)} ج.م</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">المدفوع</span>
-                <span className="font-bold text-green-600">{invoice.paid_amount?.toFixed(2) || '0.00'} ج.م</span>
+                <span className="font-bold text-green-600">{toNumber(invoice.paid_amount).toFixed(2)} ج.م</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">المتبقي</span>
-                <span className="font-bold text-red-600">{invoice.remaining_amount?.toFixed(2) || '0.00'} ج.م</span>
+                <span className="font-bold text-red-600">{toNumber(invoice.remaining_amount).toFixed(2)} ج.م</span>
               </div>
             </div>
           </div>
