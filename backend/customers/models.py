@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 import uuid
 from accounts.models import User
@@ -15,9 +15,21 @@ class Customer(models.Model):
     phone2 = models.CharField(max_length=20, blank=True, null=True, verbose_name="رقم هاتف آخر")
     address = models.TextField(blank=True, null=True, verbose_name="العنوان")
     
-    # معلومات مالية
-    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="الرصيد")
-    credit_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="حد الائتمان")
+    # معلومات مالية مع حدود
+    balance = models.DecimalField(
+        max_digits=15, 
+        decimal_places=2, 
+        default=0, 
+        validators=[MinValueValidator(-9999999999.99), MaxValueValidator(9999999999.99)],
+        verbose_name="الرصيد"
+    )
+    credit_limit = models.DecimalField(
+        max_digits=15, 
+        decimal_places=2, 
+        default=0, 
+        validators=[MinValueValidator(0), MaxValueValidator(9999999999.99)],
+        verbose_name="حد الائتمان"
+    )
     
     # معلومات إضافية
     tax_number = models.CharField(max_length=50, blank=True, null=True, verbose_name="الرقم الضريبي")
@@ -40,17 +52,20 @@ class Customer(models.Model):
         return self.name
     
     @property
+    def outstanding_balance(self):
+        """الرصيد المستحق"""
+        return self.balance
+    
+    @property
     def total_invoices(self):
         return self.invoices.count()
     
     @property
     def total_purchases(self):
-        return sum(invoice.total for invoice in self.invoices.all())
+        from django.db.models import Sum
+        return self.invoices.aggregate(total=Sum('total'))['total'] or 0
     
     @property
     def total_paid(self):
-        return sum(invoice.paid_amount for invoice in self.invoices.all())
-    
-    @property
-    def outstanding_balance(self):
-        return self.total_purchases - self.total_paid
+        from django.db.models import Sum
+        return self.invoices.aggregate(total=Sum('paid_amount'))['total'] or 0
