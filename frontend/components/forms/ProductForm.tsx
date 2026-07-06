@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useCreateProduct, useCategories, useBrands, useUnits } from '@/hooks/useProducts';
+import { useCreateProduct, useUpdateProduct, useCategories, useBrands, useUnits } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,9 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface ProductFormProps {
   onSuccess?: () => void;
@@ -24,6 +24,9 @@ interface ProductFormProps {
 
 export function ProductForm({ onSuccess, initialData, isEditing = false }: ProductFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isActive, setIsActive] = useState<boolean>(true);
+  const [isFeatured, setIsFeatured] = useState<boolean>(false);
+  const [hasStock, setHasStock] = useState<boolean>(true);
   const [formData, setFormData] = useState({
     name: '',
     name_ar: '',
@@ -33,71 +36,91 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
     unit: '',
     sku: '',
     barcode: '',
-    purchase_price: 0,
-    selling_price: 0,
-    wholesale_price: 0,
+    purchase_price: '',
+    selling_price: '',
+    wholesale_price: '',
     size: '',
     color: '',
-    weight: 0,
-    is_active: true,
-    is_featured: false,
-    has_stock: true,
+    weight: '',
   });
 
   const createProduct = useCreateProduct();
-  const { data: categoriesData } = useCategories();
-  const { data: brandsData } = useBrands();
-  const { data: unitsData } = useUnits();
-
-  // تحميل البيانات الأولية للتعديل
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        name: initialData.name || '',
-        name_ar: initialData.name_ar || '',
-        description: initialData.description || '',
-        category: initialData.category || initialData.category_id || '',
-        brand: initialData.brand || initialData.brand_id || '',
-        unit: initialData.unit || initialData.unit_id || '',
-        sku: initialData.sku || '',
-        barcode: initialData.barcode || '',
-        purchase_price: initialData.purchase_price || 0,
-        selling_price: initialData.selling_price || 0,
-        wholesale_price: initialData.wholesale_price || 0,
-        size: initialData.size || '',
-        color: initialData.color || '',
-        weight: initialData.weight || 0,
-        is_active: initialData.is_active !== undefined ? initialData.is_active : true,
-        is_featured: initialData.is_featured !== undefined ? initialData.is_featured : false,
-        has_stock: initialData.has_stock !== undefined ? initialData.has_stock : true,
-      });
-    }
-  }, [initialData]);
+  const updateProduct = useUpdateProduct();
+  const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
+  const { data: brandsData, isLoading: brandsLoading } = useBrands();
+  const { data: unitsData, isLoading: unitsLoading } = useUnits();
 
   // التأكد من أن البيانات مصفوفات
   const categories = Array.isArray(categoriesData) ? categoriesData : [];
   const brands = Array.isArray(brandsData) ? brandsData : [];
   const units = Array.isArray(unitsData) ? unitsData : [];
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? (value === '' ? 0 : parseFloat(value)) : value,
-    }));
-  };
+  console.log('📊 Categories in form:', categories);
+  console.log('📊 Brands in form:', brands);
+  console.log('📊 Units in form:', units);
 
-  const handleSelectChange = (name: string, value: string) => {
+  // تحميل البيانات عند التعديل
+  useEffect(() => {
+    console.log('🔄 Loading product data:', { isEditing, initialData });
+    
+    if (isEditing && initialData) {
+      setFormData({
+        name: initialData.name || '',
+        name_ar: initialData.name_ar || '',
+        description: initialData.description || '',
+        category: initialData.category || '',
+        brand: initialData.brand || '',
+        unit: initialData.unit || '',
+        sku: initialData.sku || '',
+        barcode: initialData.barcode || '',
+        purchase_price: initialData.purchase_price?.toString() || '',
+        selling_price: initialData.selling_price?.toString() || '',
+        wholesale_price: initialData.wholesale_price?.toString() || '',
+        size: initialData.size || '',
+        color: initialData.color || '',
+        weight: initialData.weight?.toString() || '',
+      });
+      setIsActive(initialData.is_active !== false);
+      setIsFeatured(initialData.is_featured || false);
+      setHasStock(initialData.has_stock !== false);
+    } else if (!isEditing) {
+      setFormData({
+        name: '',
+        name_ar: '',
+        description: '',
+        category: '',
+        brand: '',
+        unit: '',
+        sku: '',
+        barcode: '',
+        purchase_price: '',
+        selling_price: '',
+        wholesale_price: '',
+        size: '',
+        color: '',
+        weight: '',
+      });
+      setIsActive(true);
+      setIsFeatured(false);
+      setHasStock(true);
+    }
+  }, [initialData, isEditing]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSwitchChange = (name: string, checked: boolean) => {
-    setFormData((prev) => ({ ...prev, [name]: checked }));
+  const handleSelectChange = (name: string, value: string) => {
+    console.log(`📌 Select ${name} changed to:`, value);
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    console.log('📤 Form data before submit:', formData);
 
     // التحقق من الحقول المطلوبة
     if (!formData.name) {
@@ -125,41 +148,52 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
       setIsLoading(false);
       return;
     }
-    if (formData.purchase_price <= 0) {
+
+    const purchasePrice = parseFloat(formData.purchase_price) || 0;
+    const sellingPrice = parseFloat(formData.selling_price) || 0;
+
+    if (purchasePrice <= 0) {
       toast.error('سعر الشراء يجب أن يكون أكبر من 0');
       setIsLoading(false);
       return;
     }
-    if (formData.selling_price <= 0) {
+    if (sellingPrice <= 0) {
       toast.error('سعر البيع يجب أن يكون أكبر من 0');
       setIsLoading(false);
       return;
     }
 
-    try {
-      const data = {
-        name: formData.name,
-        name_ar: formData.name_ar || '',
-        description: formData.description || '',
-        category: formData.category,
-        brand: formData.brand,
-        unit: formData.unit,
-        sku: formData.sku,
-        barcode: formData.barcode || '',
-        purchase_price: formData.purchase_price,
-        selling_price: formData.selling_price,
-        wholesale_price: formData.wholesale_price || 0,
-        size: formData.size || '',
-        color: formData.color || '',
-        weight: formData.weight || 0,
-        is_active: formData.is_active,
-        is_featured: formData.is_featured,
-        has_stock: formData.has_stock,
-      };
+    // تجهيز البيانات للإرسال
+    const data = {
+      name: formData.name.trim(),
+      name_ar: formData.name_ar?.trim() || '',
+      description: formData.description?.trim() || '',
+      category: formData.category,
+      brand: formData.brand,
+      unit: formData.unit,
+      sku: formData.sku.trim(),
+      barcode: formData.barcode?.trim() || '',
+      purchase_price: purchasePrice,
+      selling_price: sellingPrice,
+      wholesale_price: parseFloat(formData.wholesale_price) || 0,
+      size: formData.size?.trim() || '',
+      color: formData.color?.trim() || '',
+      weight: parseFloat(formData.weight) || 0,
+      is_active: isActive,
+      is_featured: isFeatured,
+      has_stock: hasStock,
+    };
 
-      await createProduct.mutateAsync(data);
-      
-      if (!isEditing) {
+    console.log('📤 Submitting product data:', data);
+
+    try {
+      if (isEditing && initialData) {
+        console.log(`✏️ Updating product with ID: ${initialData.id}`);
+        await updateProduct.mutateAsync({ id: initialData.id, data });
+      } else {
+        console.log('➕ Creating new product');
+        await createProduct.mutateAsync(data);
+        // إعادة تعيين النموذج
         setFormData({
           name: '',
           name_ar: '',
@@ -169,26 +203,43 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
           unit: '',
           sku: '',
           barcode: '',
-          purchase_price: 0,
-          selling_price: 0,
-          wholesale_price: 0,
+          purchase_price: '',
+          selling_price: '',
+          wholesale_price: '',
           size: '',
           color: '',
-          weight: 0,
-          is_active: true,
-          is_featured: false,
-          has_stock: true,
+          weight: '',
         });
+        setIsActive(true);
+        setIsFeatured(false);
+        setHasStock(true);
       }
-      
+
       onSuccess?.();
-      toast.success(isEditing ? 'تم تحديث المنتج بنجاح' : 'تم إضافة المنتج بنجاح');
     } catch (error: any) {
-      console.error('Error saving product:', error);
+      console.error('❌ Error saving product:', error);
+      const errorData = error.response?.data;
+      if (errorData) {
+        const messages = Object.entries(errorData)
+          .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+          .join('\n');
+        toast.error(`خطأ في البيانات:\n${messages}`);
+      } else {
+        toast.error('حدث خطأ في حفظ البيانات');
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (categoriesLoading || brandsLoading || unitsLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+        <span className="mr-2 text-gray-500">جاري تحميل البيانات...</span>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
@@ -217,7 +268,9 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
         </div>
       </div>
 
+      {/* الفئات والعلامات والوحدات */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* الفئة */}
         <div className="space-y-2">
           <Label>الفئة *</Label>
           <Select 
@@ -229,7 +282,7 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
             </SelectTrigger>
             <SelectContent>
               {categories.length === 0 ? (
-                <SelectItem value="no-categories" disabled>لا توجد فئات - أضفها من Admin</SelectItem>
+                <SelectItem value="no-categories" disabled>لا توجد فئات</SelectItem>
               ) : (
                 categories.map((cat: any) => (
                   <SelectItem key={cat.id} value={cat.id}>
@@ -239,8 +292,12 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
               )}
             </SelectContent>
           </Select>
+          {categories.length === 0 && (
+            <p className="text-xs text-amber-600">⚠️ لا توجد فئات. أضف فئات من Django Admin</p>
+          )}
         </div>
 
+        {/* العلامة التجارية */}
         <div className="space-y-2">
           <Label>العلامة التجارية *</Label>
           <Select 
@@ -252,7 +309,7 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
             </SelectTrigger>
             <SelectContent>
               {brands.length === 0 ? (
-                <SelectItem value="no-brands" disabled>لا توجد علامات - أضفها من Admin</SelectItem>
+                <SelectItem value="no-brands" disabled>لا توجد علامات</SelectItem>
               ) : (
                 brands.map((brand: any) => (
                   <SelectItem key={brand.id} value={brand.id}>
@@ -262,8 +319,12 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
               )}
             </SelectContent>
           </Select>
+          {brands.length === 0 && (
+            <p className="text-xs text-amber-600">⚠️ لا توجد علامات تجارية. أضف علامات من Django Admin</p>
+          )}
         </div>
 
+        {/* وحدة القياس */}
         <div className="space-y-2">
           <Label>وحدة القياس *</Label>
           <Select 
@@ -275,16 +336,19 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
             </SelectTrigger>
             <SelectContent>
               {units.length === 0 ? (
-                <SelectItem value="no-units" disabled>لا توجد وحدات - أضفها من Admin</SelectItem>
+                <SelectItem value="no-units" disabled>لا توجد وحدات</SelectItem>
               ) : (
                 units.map((unit: any) => (
                   <SelectItem key={unit.id} value={unit.id}>
-                    {unit.name} {unit.symbol ? `(${unit.symbol})` : ''}
+                    {unit.name} {unit.name_ar ? `(${unit.name_ar})` : ''}
                   </SelectItem>
                 ))
               )}
             </SelectContent>
           </Select>
+          {units.length === 0 && (
+            <p className="text-xs text-amber-600">⚠️ لا توجد وحدات قياس. أضف وحدات من Django Admin</p>
+          )}
         </div>
       </div>
 
@@ -322,7 +386,7 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
             type="number"
             step="0.01"
             min="0"
-            value={formData.purchase_price || ''}
+            value={formData.purchase_price}
             onChange={handleChange}
             placeholder="50.00"
             required
@@ -337,7 +401,7 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
             type="number"
             step="0.01"
             min="0"
-            value={formData.selling_price || ''}
+            value={formData.selling_price}
             onChange={handleChange}
             placeholder="80.00"
             required
@@ -352,7 +416,7 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
             type="number"
             step="0.01"
             min="0"
-            value={formData.wholesale_price || ''}
+            value={formData.wholesale_price}
             onChange={handleChange}
             placeholder="65.00"
           />
@@ -390,35 +454,9 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
             type="number"
             step="0.01"
             min="0"
-            value={formData.weight || ''}
+            value={formData.weight}
             onChange={handleChange}
             placeholder="1.5"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <Label className="cursor-pointer">نشط</Label>
-          <Switch
-            checked={formData.is_active}
-            onCheckedChange={(checked) => handleSwitchChange('is_active', checked)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <Label className="cursor-pointer">مميز</Label>
-          <Switch
-            checked={formData.is_featured}
-            onCheckedChange={(checked) => handleSwitchChange('is_featured', checked)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <Label className="cursor-pointer">به مخزون</Label>
-          <Switch
-            checked={formData.has_stock}
-            onCheckedChange={(checked) => handleSwitchChange('has_stock', checked)}
           />
         </div>
       </div>
@@ -433,6 +471,99 @@ export function ProductForm({ onSuccess, initialData, isEditing = false }: Produ
           className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           placeholder="وصف المنتج..."
         />
+      </div>
+
+      {/* Switches باستخدام Buttons */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+        <div className="space-y-2">
+          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">الحالة</Label>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={isActive ? "default" : "outline"}
+              className={cn(
+                "flex-1 transition-all",
+                isActive && "bg-green-600 hover:bg-green-700 text-white"
+              )}
+              onClick={() => setIsActive(true)}
+            >
+              <Check className="w-4 h-4 ml-1" />
+              نشط
+            </Button>
+            <Button
+              type="button"
+              variant={!isActive ? "default" : "outline"}
+              className={cn(
+                "flex-1 transition-all",
+                !isActive && "bg-red-600 hover:bg-red-700 text-white"
+              )}
+              onClick={() => setIsActive(false)}
+            >
+              <X className="w-4 h-4 ml-1" />
+              غير نشط
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">مميز</Label>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={isFeatured ? "default" : "outline"}
+              className={cn(
+                "flex-1 transition-all",
+                isFeatured && "bg-amber-500 hover:bg-amber-600 text-white"
+              )}
+              onClick={() => setIsFeatured(true)}
+            >
+              <Check className="w-4 h-4 ml-1" />
+              مميز
+            </Button>
+            <Button
+              type="button"
+              variant={!isFeatured ? "default" : "outline"}
+              className={cn(
+                "flex-1 transition-all",
+                !isFeatured && "bg-gray-500 hover:bg-gray-600 text-white"
+              )}
+              onClick={() => setIsFeatured(false)}
+            >
+              <X className="w-4 h-4 ml-1" />
+              عادي
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300">به مخزون</Label>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={hasStock ? "default" : "outline"}
+              className={cn(
+                "flex-1 transition-all",
+                hasStock && "bg-blue-500 hover:bg-blue-600 text-white"
+              )}
+              onClick={() => setHasStock(true)}
+            >
+              <Check className="w-4 h-4 ml-1" />
+              متوفر
+            </Button>
+            <Button
+              type="button"
+              variant={!hasStock ? "default" : "outline"}
+              className={cn(
+                "flex-1 transition-all",
+                !hasStock && "bg-red-500 hover:bg-red-600 text-white"
+              )}
+              onClick={() => setHasStock(false)}
+            >
+              <X className="w-4 h-4 ml-1" />
+              غير متوفر
+            </Button>
+          </div>
+        </div>
       </div>
 
       <Button type="submit" className="w-full" disabled={isLoading}>

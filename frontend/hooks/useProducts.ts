@@ -10,15 +10,35 @@ import { toast } from 'sonner';
 export const useProducts = (params?: any) => {
   return useQuery({
     queryKey: ['products', params],
-    queryFn: () => productsApi.getAll(params).then(res => res.data),
-    staleTime: 60000,
+    queryFn: async () => {
+      const response = await productsApi.getAll(params);
+      console.log('📊 Products API response:', response.data);
+      // التعامل مع paginated response
+      const data = response.data;
+      if (Array.isArray(data)) {
+        return data;
+      }
+      if (data && typeof data === 'object' && 'results' in data) {
+        return data.results || [];
+      }
+      if (data && typeof data === 'object' && 'data' in data) {
+        return Array.isArray(data.data) ? data.data : [];
+      }
+      return [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+    retry: 2,
   });
 };
 
 export const useProduct = (id: string) => {
   return useQuery({
     queryKey: ['product', id],
-    queryFn: () => productsApi.getById(id).then(res => res.data),
+    queryFn: async () => {
+      const response = await productsApi.getById(id);
+      return response.data;
+    },
     enabled: !!id,
     staleTime: 60000,
   });
@@ -28,14 +48,20 @@ export const useCreateProduct = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (data: Partial<Product>) => 
-      productsApi.create(data).then(res => res.data),
+    mutationFn: async (data: Partial<Product>) => {
+      console.log('📤 Creating product:', data);
+      const response = await productsApi.create(data);
+      console.log('✅ Product created:', response.data);
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('تم إضافة المنتج بنجاح');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'حدث خطأ في إضافة المنتج');
+      console.error('❌ Create product error:', error);
+      const message = error.response?.data?.detail || 'حدث خطأ في إضافة المنتج';
+      toast.error(message);
     },
   });
 };
@@ -44,15 +70,22 @@ export const useUpdateProduct = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Product> }) =>
-      productsApi.update(id, data).then(res => res.data),
-    onSuccess: (_, { id }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Product> }) => {
+      console.log(`📤 Updating product ${id}:`, data);
+      const response = await productsApi.update(id, data);
+      console.log('✅ Product updated:', response.data);
+      return response.data;
+    },
+    onSuccess: (data, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['product', id] });
+      queryClient.setQueryData(['product', id], data);
       toast.success('تم تحديث المنتج بنجاح');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'حدث خطأ في تحديث المنتج');
+      console.error('❌ Update product error:', error);
+      const message = error.response?.data?.detail || 'حدث خطأ في تحديث المنتج';
+      toast.error(message);
     },
   });
 };
@@ -61,35 +94,54 @@ export const useDeleteProduct = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (id: string) => productsApi.delete(id).then(res => res.data),
-    onSuccess: () => {
+    mutationFn: async (id: string) => {
+      console.log(`🗑️ Deleting product ${id}`);
+      await productsApi.delete(id);
+      return id;
+    },
+    onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.removeQueries({ queryKey: ['product', id] });
       toast.success('تم حذف المنتج بنجاح');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'حدث خطأ في حذف المنتج');
+      console.error('❌ Delete product error:', error);
+      toast.error('حدث خطأ في حذف المنتج');
     },
   });
 };
 
 // ============================================
-// Categories Hooks
+// Categories Hooks - معالجة paginated response
 // ============================================
 
 export const useCategories = () => {
   return useQuery({
     queryKey: ['categories'],
-    queryFn: () => productsApi.getCategories().then(res => res.data),
+    queryFn: async () => {
+      const response = await productsApi.getCategories();
+      console.log('📊 Categories API response:', response.data);
+      const data = response.data;
+      // التعامل مع paginated response
+      if (Array.isArray(data)) {
+        return data;
+      }
+      if (data && typeof data === 'object' && 'results' in data) {
+        return data.results || [];
+      }
+      if (data && typeof data === 'object' && 'data' in data) {
+        return Array.isArray(data.data) ? data.data : [];
+      }
+      return [];
+    },
     staleTime: 300000,
   });
 };
 
 export const useCreateCategory = () => {
   const queryClient = useQueryClient();
-  
   return useMutation({
-    mutationFn: (data: Partial<Category>) =>
-      productsApi.createCategory(data).then(res => res.data),
+    mutationFn: (data: Partial<Category>) => productsApi.createCategory(data).then(res => res.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast.success('تم إضافة الفئة بنجاح');
@@ -101,23 +153,35 @@ export const useCreateCategory = () => {
 };
 
 // ============================================
-// Brands Hooks
+// Brands Hooks - معالجة paginated response
 // ============================================
 
 export const useBrands = () => {
   return useQuery({
     queryKey: ['brands'],
-    queryFn: () => productsApi.getBrands().then(res => res.data),
+    queryFn: async () => {
+      const response = await productsApi.getBrands();
+      console.log('📊 Brands API response:', response.data);
+      const data = response.data;
+      if (Array.isArray(data)) {
+        return data;
+      }
+      if (data && typeof data === 'object' && 'results' in data) {
+        return data.results || [];
+      }
+      if (data && typeof data === 'object' && 'data' in data) {
+        return Array.isArray(data.data) ? data.data : [];
+      }
+      return [];
+    },
     staleTime: 300000,
   });
 };
 
 export const useCreateBrand = () => {
   const queryClient = useQueryClient();
-  
   return useMutation({
-    mutationFn: (data: Partial<Brand>) =>
-      productsApi.createBrand(data).then(res => res.data),
+    mutationFn: (data: Partial<Brand>) => productsApi.createBrand(data).then(res => res.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brands'] });
       toast.success('تم إضافة العلامة التجارية بنجاح');
@@ -129,23 +193,35 @@ export const useCreateBrand = () => {
 };
 
 // ============================================
-// Units Hooks
+// Units Hooks - معالجة paginated response
 // ============================================
 
 export const useUnits = () => {
   return useQuery({
     queryKey: ['units'],
-    queryFn: () => productsApi.getUnits().then(res => res.data),
+    queryFn: async () => {
+      const response = await productsApi.getUnits();
+      console.log('📊 Units API response:', response.data);
+      const data = response.data;
+      if (Array.isArray(data)) {
+        return data;
+      }
+      if (data && typeof data === 'object' && 'results' in data) {
+        return data.results || [];
+      }
+      if (data && typeof data === 'object' && 'data' in data) {
+        return Array.isArray(data.data) ? data.data : [];
+      }
+      return [];
+    },
     staleTime: 300000,
   });
 };
 
 export const useCreateUnit = () => {
   const queryClient = useQueryClient();
-  
   return useMutation({
-    mutationFn: (data: Partial<Unit>) =>
-      productsApi.createUnit(data).then(res => res.data),
+    mutationFn: (data: Partial<Unit>) => productsApi.createUnit(data).then(res => res.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
       toast.success('تم إضافة وحدة القياس بنجاح');

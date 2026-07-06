@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useProducts } from '@/hooks/useProducts';
+import { useProducts, useDeleteProduct } from '@/hooks/useProducts';
 import { ProductForm } from '@/components/forms/ProductForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,86 +38,50 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function ProductsPage() {
-  const router = useRouter();
   const [search, setSearch] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<any>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editKey, setEditKey] = useState(0);
 
-  // جلب البيانات
   const { data: productsData, isLoading, error, refetch } = useProducts({ search });
+  const deleteProduct = useDeleteProduct();
 
-  // التأكد من أن products هي مصفوفة
   const products = Array.isArray(productsData) ? productsData : 
-                   productsData?.results ? productsData.results : 
-                   productsData?.data ? (Array.isArray(productsData.data) ? productsData.data : []) :
-                   [];
+                     productsData?.results ? productsData.results : 
+                     productsData?.data ? (Array.isArray(productsData.data) ? productsData.data : []) :
+                     [];
 
-  // دالة لتحديث حالة المنتج (نشط/غير نشط)
-  const handleToggleActive = async (product: any) => {
-    try {
-      const response = await fetch(`http://localhost:8000/api/v1/products/api/products/${product.id}/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-        body: JSON.stringify({ is_active: !product.is_active }),
-      });
-
-      if (response.ok) {
-        toast.success(`تم ${!product.is_active ? 'تفعيل' : 'إلغاء تفعيل'} المنتج بنجاح`);
-        refetch();
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData?.detail || 'حدث خطأ في تحديث حالة المنتج');
-      }
-    } catch (error) {
-      toast.error('حدث خطأ في الاتصال بالخادم');
-    }
-  };
-
-  // دالة لحذف المنتج
   const handleDelete = async () => {
     if (!productToDelete) return;
-    
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`http://localhost:8000/api/v1/products/api/products/${productToDelete.id}/`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      });
-
-      if (response.ok) {
-        toast.success('تم حذف المنتج بنجاح');
-        setDeleteDialogOpen(false);
-        setProductToDelete(null);
-        refetch();
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData?.detail || 'حدث خطأ في حذف المنتج');
-      }
-    } catch (error) {
-      toast.error('حدث خطأ في الاتصال بالخادم');
-    } finally {
-      setIsDeleting(false);
-    }
+    await deleteProduct.mutateAsync(productToDelete.id);
+    setDeleteDialogOpen(false);
+    setProductToDelete(null);
+    refetch();
   };
 
-  // فتح نافذة تأكيد الحذف
   const openDeleteDialog = (product: any) => {
     setProductToDelete(product);
     setDeleteDialogOpen(true);
+  };
+
+  const openEditDialog = (product: any) => {
+    console.log('✏️ Opening edit for product:', product);
+    setProductToEdit(product);
+    setEditKey(prev => prev + 1);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleRefresh = async () => {
+    await refetch();
+    toast.info('تم تحديث البيانات');
   };
 
   if (isLoading) {
@@ -134,9 +97,7 @@ export default function ProductsPage() {
       <div className="text-center py-12">
         <h3 className="text-lg font-semibold text-red-600">حدث خطأ في تحميل المنتجات</h3>
         <p className="text-gray-500">يرجى المحاولة مرة أخرى</p>
-        <Button onClick={() => refetch()} className="mt-4">
-          إعادة المحاولة
-        </Button>
+        <Button onClick={handleRefresh} className="mt-4">إعادة المحاولة</Button>
       </div>
     );
   }
@@ -151,28 +112,34 @@ export default function ProductsPage() {
             إدارة جميع المنتجات في المتجر
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              إضافة منتج
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle>إضافة منتج جديد</DialogTitle>
-              <DialogDescription>
-                أدخل معلومات المنتج الجديد
-              </DialogDescription>
-            </DialogHeader>
-            <ProductForm 
-              onSuccess={() => {
-                setIsCreateDialogOpen(false);
-                refetch();
-              }} 
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            تحديث
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="w-4 h-4" />
+                إضافة منتج
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh]">
+              <DialogHeader>
+                <DialogTitle>إضافة منتج جديد</DialogTitle>
+                <DialogDescription>
+                  أدخل معلومات المنتج الجديد
+                </DialogDescription>
+              </DialogHeader>
+              <ProductForm 
+                onSuccess={() => {
+                  setIsCreateDialogOpen(false);
+                  refetch();
+                }} 
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* البحث */}
@@ -186,6 +153,7 @@ export default function ProductsPage() {
             className="pr-9"
           />
         </div>
+        <span className="text-sm text-gray-500">{products.length} منتج</span>
       </div>
 
       {/* جدول المنتجات */}
@@ -205,16 +173,13 @@ export default function ProductsPage() {
                 <TableHead>الفئة</TableHead>
                 <TableHead>العلامة</TableHead>
                 <TableHead>سعر البيع</TableHead>
-                <TableHead>نشط</TableHead>
-                <TableHead>مميز</TableHead>
-                <TableHead>المخزون</TableHead>
                 <TableHead className="text-left">الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {!products || products.length === 0 ? (
+              {products.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                     لا توجد منتجات
                   </TableCell>
                 </TableRow>
@@ -233,28 +198,12 @@ export default function ProductsPage() {
                     <TableCell>{product.brand_name || product.brand?.name || '-'}</TableCell>
                     <TableCell>{product.selling_price || 0} ج.م</TableCell>
                     <TableCell>
-                      <Switch
-                        checked={product.is_active !== false}
-                        onCheckedChange={() => handleToggleActive(product)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.is_featured ? 'default' : 'secondary'}>
-                        {product.is_featured ? 'مميز' : 'عادي'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.has_stock !== false ? 'default' : 'destructive'}>
-                        {product.has_stock !== false ? 'متوفر' : 'نفد'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
                       <div className="flex items-center gap-2">
                         <Button 
                           variant="ghost" 
                           size="icon" 
                           className="text-blue-500 hover:text-blue-600"
-                          onClick={() => toast.info('جاري تطوير ميزة التعديل...')}
+                          onClick={() => openEditDialog(product)}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -292,24 +241,43 @@ export default function ProductsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>إلغاء</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete} 
-              disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                  جاري الحذف...
-                </>
-              ) : (
-                'نعم، احذف المنتج'
-              )}
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              نعم، احذف المنتج
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog للتعديل */}
+      <Dialog 
+        open={isEditDialogOpen} 
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) setProductToEdit(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>تعديل المنتج</DialogTitle>
+            <DialogDescription>
+              تعديل معلومات المنتج
+            </DialogDescription>
+          </DialogHeader>
+          {productToEdit && (
+            <ProductForm 
+              key={editKey}
+              initialData={productToEdit}
+              isEditing={true}
+              onSuccess={() => {
+                setIsEditDialogOpen(false);
+                setProductToEdit(null);
+                refetch();
+              }} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
