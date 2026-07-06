@@ -14,8 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Loader2, Plus, Trash2, Printer, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface InvoiceFormProps {
   onSuccess?: () => void;
@@ -43,14 +45,16 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
   ]);
 
   const createInvoice = useCreateInvoice();
-  const { data: customersData } = useCustomers();
-  const { data: productsData } = useProducts();
+  const { data: customersData, isLoading: customersLoading } = useCustomers();
+  const { data: productsData, isLoading: productsLoading } = useProducts();
 
   const customers = Array.isArray(customersData) ? customersData : 
                      customersData?.results ? customersData.results : [];
 
   const products = Array.isArray(productsData) ? productsData : 
                      productsData?.results ? productsData.results : [];
+
+  console.log('📦 Products in form:', products);
 
   const addItem = () => {
     setItems([...items, { product: '', quantity: 1, unit_price: 0, discount: 0, tax: 0 }]);
@@ -68,6 +72,21 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     setItems(newItems);
   };
 
+  const calculateSubtotal = () => {
+    let subtotal = 0;
+    items.forEach(item => {
+      subtotal += (item.quantity * item.unit_price) - item.discount + item.tax;
+    });
+    return subtotal;
+  };
+
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const discount = formData.discount || 0;
+    const tax = formData.tax || 0;
+    return subtotal - discount + tax;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -78,9 +97,15 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
       return;
     }
 
-    const validItems = items.filter(item => item.product && item.quantity > 0);
+    if (!formData.due_date) {
+      toast.error('تاريخ الاستحقاق مطلوب');
+      setIsLoading(false);
+      return;
+    }
+
+    const validItems = items.filter(item => item.product && item.quantity > 0 && item.unit_price > 0);
     if (validItems.length === 0) {
-      toast.error('يجب إضافة منتج واحد على الأقل');
+      toast.error('يجب إضافة منتج واحد على الأقل مع سعر وكمية');
       setIsLoading(false);
       return;
     }
@@ -112,6 +137,7 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
         notes: '',
       });
       setItems([{ product: '', quantity: 1, unit_price: 0, discount: 0, tax: 0 }]);
+      toast.success('تم إنشاء الفاتورة بنجاح! 🎉');
       onSuccess?.();
     } catch (error) {
       console.error('❌ Error creating invoice:', error);
@@ -120,165 +146,208 @@ export function InvoiceForm({ onSuccess }: InvoiceFormProps) {
     }
   };
 
-  // حساب الإجمالي
-  const calculateTotal = () => {
-    let subtotal = 0;
-    items.forEach(item => {
-      subtotal += (item.quantity * item.unit_price) - item.discount + item.tax;
-    });
-    const discount = formData.discount || 0;
-    const tax = formData.tax || 0;
-    return subtotal - discount + tax;
-  };
+  const subtotal = calculateSubtotal();
+  const total = calculateTotal();
+
+  if (customersLoading || productsLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+        <span className="mr-2 text-gray-500">جاري تحميل البيانات...</span>
+      </div>
+    );
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
-      {/* معلومات الفاتورة */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>العميل *</Label>
-          <Select 
-            value={formData.customer} 
-            onValueChange={(value) => setFormData({ ...formData, customer: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="اختر العميل" />
-            </SelectTrigger>
-            <SelectContent>
-              {customers.map((customer: any) => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {customer.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="due_date">تاريخ الاستحقاق *</Label>
-          <Input
-            id="due_date"
-            name="due_date"
-            type="date"
-            value={formData.due_date}
-            onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-            required
-          />
-        </div>
-      </div>
-
-      {/* بنود الفاتورة */}
-      <div className="space-y-3">
-        <Label>بنود الفاتورة</Label>
-        {items.map((item, index) => (
-          <div key={index} className="grid grid-cols-12 gap-2 items-end border p-3 rounded-lg">
-            <div className="col-span-4">
-              <Label className="text-xs">المنتج</Label>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* معلومات العميل */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">العميل *</Label>
               <Select 
-                value={item.product} 
-                onValueChange={(value) => updateItem(index, 'product', value)}
+                value={formData.customer} 
+                onValueChange={(value) => setFormData({ ...formData, customer: value })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر المنتج" />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="اختر العميل" />
                 </SelectTrigger>
                 <SelectContent>
-                  {products.map((product: any) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name} - {product.selling_price} ج.م
-                    </SelectItem>
-                  ))}
+                  {customers.length === 0 ? (
+                    <SelectItem value="no-customers" disabled>لا توجد عملاء</SelectItem>
+                  ) : (
+                    customers.map((customer: any) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name} - {customer.phone}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-2">
-              <Label className="text-xs">الكمية</Label>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">تاريخ الاستحقاق *</Label>
               <Input
-                type="number"
-                min="1"
-                value={item.quantity}
-                onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                type="date"
+                value={formData.due_date}
+                onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                className="w-full"
+                required
               />
             </div>
-            <div className="col-span-2">
-              <Label className="text-xs">سعر الوحدة</Label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* بنود الفاتورة */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <Label className="text-sm font-medium">بنود الفاتورة</Label>
+            <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-2">
+              <Plus className="w-4 h-4" />
+              إضافة بند
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {items.map((item, index) => (
+              <div key={index} className="grid grid-cols-12 gap-2 items-end bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
+                <div className="col-span-4">
+                  <Label className="text-xs">المنتج</Label>
+                  <Select 
+                    value={item.product} 
+                    onValueChange={(value) => updateItem(index, 'product', value)}
+                  >
+                    <SelectTrigger className="w-full h-9">
+                      <SelectValue placeholder="اختر المنتج" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.length === 0 ? (
+                        <SelectItem value="no-products" disabled>لا توجد منتجات</SelectItem>
+                      ) : (
+                        products.map((product: any) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name} - {product.selling_price} ج.م
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-xs">الكمية</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={item.quantity}
+                    onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                    className="h-9"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-xs">السعر</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={item.unit_price}
+                    onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                    className="h-9"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-xs">الخصم</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={item.discount}
+                    onChange={(e) => updateItem(index, 'discount', parseFloat(e.target.value) || 0)}
+                    className="h-9"
+                  />
+                </div>
+                <div className="col-span-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-50"
+                    onClick={() => removeItem(index)}
+                    disabled={items.length === 1}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="col-span-1 text-left">
+                  <Label className="text-xs">الإجمالي</Label>
+                  <p className="text-sm font-bold text-blue-600">
+                    {((item.quantity * item.unit_price) - item.discount + item.tax).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* الخصم والضريبة والإجمالي */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">خصم الفاتورة</Label>
               <Input
                 type="number"
                 step="0.01"
-                value={item.unit_price}
-                onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                min="0"
+                value={formData.discount}
+                onChange={(e) => setFormData({ ...formData, discount: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
               />
             </div>
-            <div className="col-span-2">
-              <Label className="text-xs">الخصم</Label>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">ضريبة الفاتورة</Label>
               <Input
                 type="number"
                 step="0.01"
-                value={item.discount}
-                onChange={(e) => updateItem(index, 'discount', parseFloat(e.target.value) || 0)}
+                min="0"
+                value={formData.tax}
+                onChange={(e) => setFormData({ ...formData, tax: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
               />
             </div>
-            <div className="col-span-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-red-500"
-                onClick={() => removeItem(index)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+            <div className="space-y-2 flex flex-col items-end justify-end">
+              <div className="text-right w-full">
+                <p className="text-sm text-gray-500">المجموع الفرعي</p>
+                <p className="text-lg font-bold text-gray-700">{subtotal.toFixed(2)} ج.م</p>
+              </div>
+              <div className="text-right w-full border-t pt-2">
+                <p className="text-sm text-gray-500">الإجمالي النهائي</p>
+                <p className="text-2xl font-bold text-blue-600">{total.toFixed(2)} ج.م</p>
+              </div>
             </div>
           </div>
-        ))}
-        <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-2">
-          <Plus className="w-4 h-4" />
-          إضافة بند
-        </Button>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* الخصم والضريبة */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="discount">خصم الفاتورة</Label>
-          <Input
-            id="discount"
-            type="number"
-            step="0.01"
-            value={formData.discount}
-            onChange={(e) => setFormData({ ...formData, discount: parseFloat(e.target.value) || 0 })}
-            placeholder="0.00"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="tax">ضريبة الفاتورة</Label>
-          <Input
-            id="tax"
-            type="number"
-            step="0.01"
-            value={formData.tax}
-            onChange={(e) => setFormData({ ...formData, tax: parseFloat(e.target.value) || 0 })}
-            placeholder="0.00"
-          />
-        </div>
-        <div className="space-y-2 flex items-center justify-end">
-          <div className="text-right">
-            <Label className="text-sm">الإجمالي</Label>
-            <p className="text-2xl font-bold text-blue-600">{calculateTotal().toFixed(2)} ج.م</p>
+      {/* ملاحظات */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">ملاحظات</Label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="ملاحظات على الفاتورة..."
+            />
           </div>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="notes">ملاحظات</Label>
-        <textarea
-          id="notes"
-          name="notes"
-          value={formData.notes}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          placeholder="ملاحظات على الفاتورة..."
-        />
-      </div>
+        </CardContent>
+      </Card>
 
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? (

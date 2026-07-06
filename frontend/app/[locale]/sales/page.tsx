@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useInvoices, useDeleteInvoice } from '@/hooks/useSales';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +39,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Eye, Trash2, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, Search, Eye, Trash2, Loader2, RefreshCw, Printer } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { InvoiceForm } from '@/components/forms/InvoiceForm';
 import { toast } from 'sonner';
@@ -129,7 +130,7 @@ export default function SalesPage() {
                 فاتورة جديدة
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh]">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>إنشاء فاتورة جديدة</DialogTitle>
                 <DialogDescription>
@@ -210,9 +211,16 @@ export default function SalesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="text-blue-500 hover:text-blue-600">
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <Link href={`/invoice/${invoice.id}`} target="_blank">
+                          <Button variant="ghost" size="icon" className="text-blue-500 hover:text-blue-600">
+                            <Printer className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                        <Link href={`/invoice/${invoice.id}`}>
+                          <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </Link>
                         <Button 
                           variant="ghost" 
                           size="icon" 
