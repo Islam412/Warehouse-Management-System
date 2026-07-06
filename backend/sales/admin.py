@@ -51,8 +51,13 @@ class InvoiceAdmin(admin.ModelAdmin):
     
     def total_display(self, obj):
         """عرض الإجمالي بشكل منسق"""
-        return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', obj.total)
+        try:
+            total = float(obj.total) if obj.total else 0
+            return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', total)
+        except (ValueError, TypeError):
+            return format_html('<span style="font-weight: bold;">0.00 جنيه</span>')
     total_display.short_description = _('الإجمالي')
+    total_display.admin_order_field = 'total'
     
     def status_display(self, obj):
         """عرض الحالة بشكل منسق"""
@@ -98,7 +103,11 @@ class PaymentAdmin(admin.ModelAdmin):
     ordering = ['-created_at']
     
     def amount_display(self, obj):
-        return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', obj.amount)
+        try:
+            amount = float(obj.amount) if obj.amount else 0
+            return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', amount)
+        except (ValueError, TypeError):
+            return format_html('<span style="font-weight: bold;">0.00 جنيه</span>')
     amount_display.short_description = _('المبلغ')
 
 @admin.register(Return)
@@ -111,5 +120,9 @@ class ReturnAdmin(admin.ModelAdmin):
     ordering = ['-created_at']
     
     def amount_display(self, obj):
-        return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', obj.amount)
+        try:
+            amount = float(obj.amount) if obj.amount else 0
+            return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', amount)
+        except (ValueError, TypeError):
+            return format_html('<span style="font-weight: bold;">0.00 جنيه</span>')
     amount_display.short_description = _('المبلغ')
