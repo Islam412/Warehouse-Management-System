@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -39,8 +39,6 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const path = pathname?.replace(/^\/(ar|en)/, '') || '/';
-
   const handleLogout = () => {
     clearTokens();
     toast.success('تم تسجيل الخروج بنجاح');
@@ -59,7 +57,7 @@ export function Sidebar() {
         <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-1">
             {menuItems.map((item) => {
-              const isActive = path === item.href || path.startsWith(item.href + '/');
+              const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
               const Icon = item.icon;
               return (
                 <li key={item.href}>
