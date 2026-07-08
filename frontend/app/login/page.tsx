@@ -14,7 +14,7 @@ import {
   TrendingUp,
   CheckCircle2,
 } from 'lucide-react';
-import { setTokens } from '@/lib/auth';
+import { setTokens, getAccessToken } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,8 +27,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     setIsVisible(true);
-    // التحقق من وجود توكن
-    const token = localStorage.getItem('access_token');
+    const token = getAccessToken();
     if (token) {
       router.push('/dashboard');
     }
@@ -49,7 +48,6 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // تخزين التوكن في localStorage و Cookies
         setTokens(data.access, data.refresh);
         router.push('/dashboard');
       } else {
@@ -74,7 +72,6 @@ export default function LoginPage() {
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-400/5 rounded-full blur-3xl" />
       </div>
 
       <motion.div
@@ -83,7 +80,6 @@ export default function LoginPage() {
         transition={{ duration: 0.6 }}
         className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 relative z-10"
       >
-        {/* الجانب الأيمن - معلومات النظام */}
         <motion.div
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: isVisible ? 1 : 0, x: isVisible ? 0 : -30 }}
@@ -126,7 +122,6 @@ export default function LoginPage() {
           </div>
         </motion.div>
 
-        {/* الجانب الأيسر - نموذج تسجيل الدخول */}
         <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: isVisible ? 1 : 0, x: isVisible ? 0 : 30 }}
@@ -169,7 +164,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-800 dark:text-white placeholder:text-gray-400"
-                placeholder="example@domain.com"
+                placeholder="admin@duka.com"
                 required
               />
             </div>
