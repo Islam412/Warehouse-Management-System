@@ -1,0 +1,1677 @@
+{
+  "info": {
+    "name": "DUKA - Warehouse Management System API",
+    "description": "API Collection for DUKA Warehouse Management System\n\nتم التطوير بواسطة: مهندس / إسلام حمدى\nPortfolio: https://islam-portfolio-phi.vercel.app/",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Login - Get JWT Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@duka.com\",\n  \"password\": \"admin123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/token/",
+              "host": ["{{baseUrl}}"],
+              "path": ["token/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/token/refresh/",
+              "host": ["{{baseUrl}}"],
+              "path": ["token/refresh/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "My Account",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/api/account/me/",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth/api/account/me/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/api/profile/me/",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth/api/profile/me/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register - Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"username\": \"newuser\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"User\",\n  \"password\": \"user123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/api/create/",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth/api/create/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/api/logout/",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth/api/logout/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📦 Products",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/api/products/",
+              "host": ["{{baseUrl}}"],
+              "path": ["products/api/products/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/api/products/{{product_id}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["products/api/products/{{product_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"منتج جديد\",\n  \"name_ar\": \"منتج جديد\",\n  \"description\": \"وصف المنتج الجديد\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"unit\": \"{{unit_id}}\",\n  \"sku\": \"SKU-NEW-001\",\n  \"barcode\": \"1234567890\",\n  \"purchase_price\": 100.00,\n  \"selling_price\": 150.00,\n  \"wholesale_price\": 120.00,\n  \"size\": \"1/2\",\n  \"color\": \"Chrome\",\n  \"weight\": 0.5,\n  \"is_active\": true,\n  \"is_featured\": true,\n  \"has_stock\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products/api/products/",
+              "host": ["{{baseUrl}}"],
+              "path": ["products/api/products/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"منتج محدث\",\n  \"selling_price\": 200.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products/api/products/{{product_id}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["products/api/products/{{product_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/api/products/{{product_id}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["products/api/products/{{product_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/api/products/search/?q=قلب",
+              "host": ["{{baseUrl}}"],
+              "path": ["products/api/products/search/"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "قلب"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/api/categories/",
+              "host": ["{{baseUrl}}"],
+              "path": ["products/api/categories/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"فئة جديدة\",\n  \"name_ar\": \"فئة جديدة\",\n  \"description\": \"وصف الفئة الجديدة\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products/api/categories/",
+              "host": ["{{baseUrl}}"],
+              "path": ["products/api/categories/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Brands",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/api/brands/",
+              "host": ["{{baseUrl}}"],
+              "path": ["products/api/brands/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Units",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/api/units/",
+              "host": ["{{baseUrl}}"],
+              "path": ["products/api/units/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "👤 Customers",
+      "item": [
+        {
+          "name": "Get All Customers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers/api/customers/",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers/api/customers/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Customer by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers/api/customers/{{customer_id}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers/api/customers/{{customer_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"عميل جديد\",\n  \"name_ar\": \"عميل جديد\",\n  \"phone\": \"01001234567\",\n  \"email\": \"new@customer.com\",\n  \"address\": \"القاهرة\",\n  \"balance\": 0,\n  \"is_active\": true,\n  \"is_vip\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/api/customers/",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers/api/customers/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Customer",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"عميل محدث\",\n  \"is_vip\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/api/customers/{{customer_id}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers/api/customers/{{customer_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Customer",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers/api/customers/{{customer_id}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers/api/customers/{{customer_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get VIP Customers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers/api/customers/vip/",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers/api/customers/vip/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Top Spenders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers/api/customers/top_spenders/",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers/api/customers/top_spenders/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Customer Balance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500.00,\n  \"notes\": \"إضافة رصيد\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/api/customers/{{customer_id}}/update_balance/",
+              "host": ["{{baseUrl}}"],
+              "path": ["customers/api/customers/{{customer_id}}/update_balance/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🏭 Suppliers",
+      "item": [
+        {
+          "name": "Get All Suppliers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/api/suppliers/",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers/api/suppliers/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Supplier",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"مورد جديد\",\n  \"name_ar\": \"مورد جديد\",\n  \"phone\": \"01001234567\",\n  \"email\": \"supplier@example.com\",\n  \"address\": \"القاهرة\",\n  \"balance\": 0,\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/api/suppliers/",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers/api/suppliers/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Supplier",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"مورد محدث\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/api/suppliers/{{supplier_id}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers/api/suppliers/{{supplier_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Supplier",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/api/suppliers/{{supplier_id}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers/api/suppliers/{{supplier_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Top Suppliers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/api/suppliers/top_suppliers/",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers/api/suppliers/top_suppliers/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Supplier Balance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1000.00,\n  \"notes\": \"تسوية رصيد\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/api/suppliers/{{supplier_id}}/update_balance/",
+              "host": ["{{baseUrl}}"],
+              "path": ["suppliers/api/suppliers/{{supplier_id}}/update_balance/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🛒 Sales",
+      "item": [
+        {
+          "name": "Get All Invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/api/invoices/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sales/api/invoices/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoice by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/api/invoices/{{invoice_id}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sales/api/invoices/{{invoice_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": \"{{customer_id}}\",\n  \"due_date\": \"2026-12-31\",\n  \"discount\": 0,\n  \"tax\": 0,\n  \"status\": \"confirmed\",\n  \"notes\": \"فاتورة جديدة\",\n  \"items\": [\n    {\n      \"product\": \"{{product_id}}\",\n      \"quantity\": 2,\n      \"unit_price\": 150.00,\n      \"discount\": 0,\n      \"tax\": 0\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sales/api/invoices/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sales/api/invoices/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Invoice",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"paid\",\n  \"notes\": \"تم الدفع\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sales/api/invoices/{{invoice_id}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sales/api/invoices/{{invoice_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Invoice",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/api/invoices/{{invoice_id}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sales/api/invoices/{{invoice_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Payment to Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 100.00,\n  \"payment_method\": \"cash\",\n  \"reference\": \"دفعة نقدية\",\n  \"notes\": \"دفعة أولى\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sales/api/invoices/{{invoice_id}}/add_payment/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sales/api/invoices/{{invoice_id}}/add_payment/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Return to Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{product_id}}\",\n  \"quantity\": 1,\n  \"amount\": 150.00,\n  \"reason\": \"عيوب في المنتج\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sales/api/invoices/{{invoice_id}}/add_return/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sales/api/invoices/{{invoice_id}}/add_return/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Overdue Invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/api/invoices/overdue/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sales/api/invoices/overdue/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Today's Invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/api/invoices/today/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sales/api/invoices/today/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/api/payments/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sales/api/payments/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Returns",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/api/returns/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sales/api/returns/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📦 Inventory",
+      "item": [
+        {
+          "name": "Get All Warehouses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/api/warehouses/",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory/api/warehouses/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Stocks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/api/stocks/",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory/api/stocks/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Low Stock Items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/api/stocks/low_stock/",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory/api/stocks/low_stock/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Adjust Stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{product_id}}\",\n  \"warehouse_id\": \"{{warehouse_id}}\",\n  \"quantity\": 50,\n  \"movement_type\": \"adjustment\",\n  \"notes\": \"تعديل مخزون يدوي\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/inventory/api/movements/adjust_stock/",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory/api/movements/adjust_stock/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Stock Movements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/api/movements/",
+              "host": ["{{baseUrl}}"],
+              "path": ["inventory/api/movements/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "💰 Finance",
+      "item": [
+        {
+          "name": "Get All Accounts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/api/accounts/",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance/api/accounts/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Journal Entries",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/api/journal-entries/",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance/api/journal-entries/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Journal Entry",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-07-08\",\n  \"description\": \"قيد يومية\",\n  \"lines\": [\n    {\n      \"account\": \"{{account_id}}\",\n      \"debit\": 1000.00\n    },\n    {\n      \"account\": \"{{account_id2}}\",\n      \"credit\": 1000.00\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/api/journal-entries/",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance/api/journal-entries/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Expenses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/api/expenses/",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance/api/expenses/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Expense",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"rent\",\n  \"amount\": 5000.00,\n  \"date\": \"2026-07-08\",\n  \"description\": \"إيجار المكتب\",\n  \"payment_method\": \"cash\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/api/expenses/",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance/api/expenses/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Incomes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/api/incomes/",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance/api/incomes/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Income",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"sales\",\n  \"amount\": 10000.00,\n  \"date\": \"2026-07-08\",\n  \"description\": \"مبيعات اليوم\",\n  \"payment_method\": \"cash\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/finance/api/incomes/",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance/api/incomes/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Today's Closing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/api/closings/create_today/",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance/api/closings/create_today/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Closing Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/finance/api/closings/summary/",
+              "host": ["{{baseUrl}}"],
+              "path": ["finance/api/closings/summary/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/api/summary/",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard/api/summary/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Sales Chart",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/api/chart/sales/?period=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard/api/chart/sales/"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "month"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Comparison Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/api/comparison/",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard/api/comparison/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📈 Reports",
+      "item": [
+        {
+          "name": "Sales Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date_from\": \"2026-01-01\",\n  \"date_to\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/api/reports/sales/",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports/api/reports/sales/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Purchases Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date_from\": \"2026-01-01\",\n  \"date_to\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/api/reports/purchases/",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports/api/reports/purchases/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Inventory Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/api/reports/inventory/",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports/api/reports/inventory/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Profit/Loss Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date_from\": \"2026-01-01\",\n  \"date_to\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/api/reports/profit_loss/",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports/api/reports/profit_loss/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Customers Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/api/reports/customers/",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports/api/reports/customers/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Suppliers Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reports/api/reports/suppliers/",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports/api/reports/suppliers/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Report Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/api/reports/logs/",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports/api/reports/logs/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔔 Notifications",
+      "item": [
+        {
+          "name": "Get All Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/api/notifications/",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications/api/notifications/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/api/notifications/unread_count/",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications/api/notifications/unread_count/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/api/notifications/{{notification_id}}/mark_read/",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications/api/notifications/{{notification_id}}/mark_read/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/api/notifications/mark_all_read/",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications/api/notifications/mark_all_read/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Preferences",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/api/preferences/",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications/api/preferences/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Preferences",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enable_notifications\": true,\n  \"enable_email\": true,\n  \"enable_push\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/api/preferences/",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications/api/preferences/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Settings",
+      "item": [
+        {
+          "name": "Get Company Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/api/company/",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings/api/company/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Company Settings",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"DUKA Store\",\n  \"phone\": \"0123456789\",\n  \"email\": \"info@duka.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings/api/company/",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings/api/company/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Branches",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/api/branches/",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings/api/branches/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payment Methods",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/api/payment-methods/",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings/api/payment-methods/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Shipping Methods",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/api/shipping-methods/",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings/api/shipping-methods/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
