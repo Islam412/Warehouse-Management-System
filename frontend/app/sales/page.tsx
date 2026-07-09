@@ -72,7 +72,7 @@ export default function SalesPage() {
   const invoices = Array.isArray(invoicesData) ? invoicesData : 
                      invoicesData?.results ? invoicesData.results : [];
 
-  // حساب الإحصائيات مع تحويل الأرقام
+  // حساب الإحصائيات
   const totalInvoices = invoices.length;
   const totalAmount = invoices.reduce((sum: number, inv: any) => {
     const total = typeof inv.total === 'number' ? inv.total : parseFloat(inv.total) || 0;
@@ -255,22 +255,25 @@ export default function SalesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          {/* زر الطباعة */}
                           <Link href={`/invoice/${invoice.id}`} target="_blank">
-                            <Button variant="ghost" size="icon" className="text-blue-500" title="طباعة">
+                            <Button variant="ghost" size="icon" className="text-blue-500 hover:text-blue-600" title="طباعة الفاتورة">
                               <Printer className="w-4 h-4" />
                             </Button>
                           </Link>
+                          {/* زر العين (عرض) */}
                           <Link href={`/invoice/${invoice.id}`}>
-                            <Button variant="ghost" size="icon" className="text-green-500" title="عرض">
+                            <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" title="عرض الفاتورة">
                               <Eye className="w-4 h-4" />
                             </Button>
                           </Link>
+                          {/* زر الحذف */}
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="text-red-500"
+                            className="text-red-500 hover:text-red-600"
                             onClick={() => openDeleteDialog(invoice)}
-                            title="حذف"
+                            title="حذف الفاتورة"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

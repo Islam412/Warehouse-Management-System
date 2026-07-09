@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useProducts, useDeleteProduct } from '@/hooks/useProducts';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -39,7 +40,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { ProductForm } from '@/components/forms/ProductForm';
-import { Plus, Search, Edit, Trash2, Loader2, RefreshCw, Printer, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, Loader2, RefreshCw, Printer } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -51,18 +52,12 @@ export default function ProductsPage() {
   const [productToEdit, setProductToEdit] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editKey, setEditKey] = useState(0);
-  const [showComparison, setShowComparison] = useState(false);
 
   const { data: productsData, isLoading, error, refetch } = useProducts({ search });
   const deleteProduct = useDeleteProduct();
 
   const products = Array.isArray(productsData) ? productsData : 
                      productsData?.results ? productsData.results : [];
-
-  // ترتيب المنتجات حسب الأكثر مبيعاً
-  const sortedProducts = [...products].sort((a, b) => (b.total_quantity || 0) - (a.total_quantity || 0));
-  const topProducts = sortedProducts.slice(0, 5);
-  const bottomProducts = sortedProducts.slice(-5).reverse();
 
   const handleDelete = async () => {
     if (!productToDelete) return;
@@ -81,10 +76,6 @@ export default function ProductsPage() {
     setProductToEdit(product);
     setEditKey(prev => prev + 1);
     setIsEditDialogOpen(true);
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   const handleRefresh = async () => {
@@ -112,20 +103,15 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      {/* الرأس */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">المنتجات</h1>
           <p className="text-gray-500 text-sm">إدارة جميع المنتجات في المتجر</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2">
             <Printer className="w-4 h-4" />
             طباعة
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowComparison(!showComparison)} className="gap-2">
-            {showComparison ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
-            {showComparison ? 'إخفاء المقارنة' : 'مقارنة المنتجات'}
           </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
             <RefreshCw className="w-4 h-4" />
@@ -154,7 +140,6 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* البحث */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -168,57 +153,6 @@ export default function ProductsPage() {
         <span className="text-sm text-gray-500">{products.length} منتج</span>
       </div>
 
-      {/* مقارنة المنتجات */}
-      {showComparison && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2 text-green-600">
-                <TrendingUp className="w-4 h-4" />
-                الأكثر مبيعاً
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {topProducts.length === 0 ? (
-                  <p className="text-gray-500 text-sm">لا توجد بيانات</p>
-                ) : (
-                  topProducts.map((p: any, i: number) => (
-                    <div key={i} className="flex justify-between items-center text-sm">
-                      <span>{i+1}. {p.name}</span>
-                      <span className="font-bold text-green-600">{p.total_quantity || 0} وحدة</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2 text-red-600">
-                <TrendingDown className="w-4 h-4" />
-                الأقل مبيعاً
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {bottomProducts.length === 0 ? (
-                  <p className="text-gray-500 text-sm">لا توجد بيانات</p>
-                ) : (
-                  bottomProducts.map((p: any, i: number) => (
-                    <div key={i} className="flex justify-between items-center text-sm">
-                      <span>{i+1}. {p.name}</span>
-                      <span className="font-bold text-red-600">{p.total_quantity || 0} وحدة</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* جدول المنتجات */}
       <Card>
         <CardHeader>
           <CardTitle>قائمة المنتجات</CardTitle>
@@ -264,11 +198,14 @@ export default function ProductsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="text-blue-500" onClick={() => openEditDialog(product)}>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="text-blue-500" title="عرض التفاصيل">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-amber-500" onClick={() => openEditDialog(product)} title="تعديل">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => openDeleteDialog(product)}>
+                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => openDeleteDialog(product)} title="حذف">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -281,7 +218,6 @@ export default function ProductsPage() {
         </CardContent>
       </Card>
 
-      {/* Dialogs */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -24,11 +23,10 @@ import { Plus, Search, Eye, Loader2, RefreshCw, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function PurchasesPage() {
-  const router = useRouter();
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // بيانات وهمية
+  // بيانات تجريبية
   const purchases = [
     { id: 1, order_number: 'PO-001', supplier: 'مورد إسلام الأول', total: 5000, status: 'received', date: '2026-07-08' },
     { id: 2, order_number: 'PO-002', supplier: 'شركة النيل للتجارة', total: 3000, status: 'ordered', date: '2026-07-07' },

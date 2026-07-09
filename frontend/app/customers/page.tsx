@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useCustomers, useDeleteCustomer } from '@/hooks/useCustomers';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -39,7 +40,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { CustomerForm } from '@/components/forms/CustomerForm';
-import { Plus, Search, Edit, Trash2, Loader2, RefreshCw, Printer, Star, Users, UserX } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, Loader2, RefreshCw, Printer } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -51,17 +52,12 @@ export default function CustomersPage() {
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editKey, setEditKey] = useState(0);
-  const [showComparison, setShowComparison] = useState(false);
 
   const { data: customersData, isLoading, error, refetch } = useCustomers({ search });
   const deleteCustomer = useDeleteCustomer();
 
   const customers = Array.isArray(customersData) ? customersData : 
                      customersData?.results ? customersData.results : [];
-
-  const vipCustomers = customers.filter(c => c.is_vip);
-  const regularCustomers = customers.filter(c => !c.is_vip && c.is_active);
-  const inactiveCustomers = customers.filter(c => !c.is_active);
 
   const handleDelete = async () => {
     if (!customerToDelete) return;
@@ -82,7 +78,6 @@ export default function CustomersPage() {
     setIsEditDialogOpen(true);
   };
 
-  const handlePrint = () => window.print();
   const handleRefresh = async () => {
     await refetch();
     toast.info('تم تحديث البيانات');
@@ -114,13 +109,9 @@ export default function CustomersPage() {
           <p className="text-gray-500 text-sm">إدارة جميع العملاء في المتجر</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2">
             <Printer className="w-4 h-4" />
             طباعة
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowComparison(!showComparison)} className="gap-2">
-            <Users className="w-4 h-4" />
-            {showComparison ? 'إخفاء الإحصائيات' : 'إحصائيات العملاء'}
           </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
             <RefreshCw className="w-4 h-4" />
@@ -161,52 +152,6 @@ export default function CustomersPage() {
         </div>
         <span className="text-sm text-gray-500">{customers.length} عميل</span>
       </div>
-
-      {showComparison && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2 text-amber-600">
-                <Star className="w-4 h-4" />
-                العملاء المميزين (VIP)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{vipCustomers.length}</p>
-              <div className="space-y-1 mt-2">
-                {vipCustomers.slice(0, 5).map(c => (
-                  <div key={c.id} className="text-sm flex justify-between">
-                    <span>{c.name}</span>
-                    <span className="text-amber-500">⭐</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2 text-green-600">
-                <Users className="w-4 h-4" />
-                العملاء النشطين
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{regularCustomers.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2 text-red-600">
-                <UserX className="w-4 h-4" />
-                العملاء غير النشطين
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{inactiveCustomers.length}</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       <Card>
         <CardHeader>
@@ -261,11 +206,14 @@ export default function CustomersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="text-blue-500" onClick={() => openEditDialog(customer)}>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="text-blue-500" title="عرض التفاصيل">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-amber-500" onClick={() => openEditDialog(customer)} title="تعديل">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => openDeleteDialog(customer)}>
+                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => openDeleteDialog(customer)} title="حذف">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

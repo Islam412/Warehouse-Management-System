@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { SupplierForm } from '@/components/forms/SupplierForm';
-import { Plus, Search, Edit, Trash2, Loader2, RefreshCw, Printer, TrendingUp } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, Loader2, RefreshCw, Printer } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -51,16 +51,12 @@ export default function SuppliersPage() {
   const [supplierToEdit, setSupplierToEdit] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editKey, setEditKey] = useState(0);
-  const [showComparison, setShowComparison] = useState(false);
 
   const { data: suppliersData, isLoading, error, refetch } = useSuppliers({ search });
   const deleteSupplier = useDeleteSupplier();
 
   const suppliers = Array.isArray(suppliersData) ? suppliersData : 
                      suppliersData?.results ? suppliersData.results : [];
-
-  const sortedSuppliers = [...suppliers].sort((a, b) => (b.balance || 0) - (a.balance || 0));
-  const topSuppliers = sortedSuppliers.slice(0, 5);
 
   const handleDelete = async () => {
     if (!supplierToDelete) return;
@@ -81,7 +77,6 @@ export default function SuppliersPage() {
     setIsEditDialogOpen(true);
   };
 
-  const handlePrint = () => window.print();
   const handleRefresh = async () => {
     await refetch();
     toast.info('تم تحديث البيانات');
@@ -113,13 +108,9 @@ export default function SuppliersPage() {
           <p className="text-gray-500 text-sm">إدارة جميع الموردين في المتجر</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2">
             <Printer className="w-4 h-4" />
             طباعة
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowComparison(!showComparison)} className="gap-2">
-            <TrendingUp className="w-4 h-4" />
-            {showComparison ? 'إخفاء الترتيب' : 'ترتيب الموردين'}
           </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
             <RefreshCw className="w-4 h-4" />
@@ -160,31 +151,6 @@ export default function SuppliersPage() {
         </div>
         <span className="text-sm text-gray-500">{suppliers.length} مورد</span>
       </div>
-
-      {showComparison && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2 text-blue-600">
-              <TrendingUp className="w-4 h-4" />
-              ترتيب الموردين حسب الرصيد
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {topSuppliers.length === 0 ? (
-                <p className="text-gray-500 text-sm">لا توجد بيانات</p>
-              ) : (
-                topSuppliers.map((s: any, i: number) => (
-                  <div key={i} className="flex justify-between items-center text-sm">
-                    <span>{i+1}. {s.name}</span>
-                    <span className="font-bold text-blue-600">{s.balance || 0} ج.م</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader>
@@ -231,11 +197,14 @@ export default function SuppliersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="text-blue-500" onClick={() => openEditDialog(supplier)}>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="text-blue-500" title="عرض التفاصيل">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-amber-500" onClick={() => openEditDialog(supplier)} title="تعديل">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => openDeleteDialog(supplier)}>
+                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => openDeleteDialog(supplier)} title="حذف">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
