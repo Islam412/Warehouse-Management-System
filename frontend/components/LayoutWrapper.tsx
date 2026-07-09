@@ -1,3 +1,4 @@
+// frontend/components/LayoutWrapper.tsx
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -11,10 +12,8 @@ const AUTH_PAGES = ['/login', '/register', '/forgot-password'];
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  // التحقق مما إذا كانت الصفحة الحالية من صفحات Auth
   const isAuthPage = AUTH_PAGES.some(page => pathname === page || pathname?.startsWith(page + '/'));
   
-  // إذا كانت صفحة Auth، لا نعرض Sidebar
   if (isAuthPage) {
     return (
       <>
@@ -24,7 +23,6 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // باقي الصفحات مع Sidebar
   return (
     <div className="min-h-screen flex">
       <Sidebar />

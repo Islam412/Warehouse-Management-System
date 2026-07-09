@@ -1,3 +1,4 @@
+// frontend/components/layout/Footer.tsx
 'use client';
 
 import { Heart } from 'lucide-react';
@@ -7,7 +8,7 @@ export function Footer() {
 
   return (
     <footer className="border-t bg-background py-4 text-center text-sm text-muted-foreground">
-      <div className="container mx-auto flex items-center justify-center gap-1">
+      <div className="container mx-auto flex items-center justify-center gap-1 flex-wrap">
         <span>© {year} DUKA</span>
         <span>•</span>
         <span>نظام إدارة المتاجر المتكامل</span>
