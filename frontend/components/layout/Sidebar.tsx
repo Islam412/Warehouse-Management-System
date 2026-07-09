@@ -22,7 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Store,
-  Eye,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -85,10 +85,7 @@ export function Sidebar() {
       </Button>
 
       {isMobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
-          onClick={toggleMobile}
-        />
+        <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={toggleMobile} />
       )}
 
       <aside
@@ -135,11 +132,7 @@ export function Sidebar() {
           )}
           onClick={toggleSidebar}
         >
-          {isCollapsed ? (
-            <ChevronRight className="h-3 w-3" />
-          ) : (
-            <ChevronLeft className="h-3 w-3" />
-          )}
+          {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
         </Button>
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -162,11 +155,7 @@ export function Sidebar() {
               >
                 <Icon className={cn('h-5 w-5 flex-shrink-0', active && 'text-primary-foreground')} />
                 {!isCollapsed && (
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="truncate"
-                  >
+                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="truncate">
                     {item.label}
                   </motion.span>
                 )}
@@ -176,6 +165,25 @@ export function Sidebar() {
         </nav>
 
         <div className="border-t border-border p-3 space-y-2">
+          {/* زر البروفايل */}
+          <Link href="/profile">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'w-full justify-start gap-3 text-sm font-medium text-muted-foreground hover:text-foreground',
+                isCollapsed && 'justify-center px-2'
+              )}
+            >
+              <User className="h-5 w-5 flex-shrink-0" />
+              {!isCollapsed && (
+                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  الملف الشخصي
+                </motion.span>
+              )}
+            </Button>
+          </Link>
+
           <Button
             variant="ghost"
             size="sm"
@@ -218,7 +226,7 @@ export function Sidebar() {
             <div className="flex items-center gap-3 pt-2 mt-2 border-t border-border">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary/10 text-primary">
-                  <Users className="h-4 w-4" />
+                  <User className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
