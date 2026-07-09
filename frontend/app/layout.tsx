@@ -1,19 +1,13 @@
 import type { Metadata } from "next";
-import { Cairo } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { Providers } from "@/components/providers/Providers";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { LayoutWrapper } from "@/components/LayoutWrapper";
+import { Toaster } from "sonner";
 
-const cairo = Cairo({
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-cairo",
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "DUKA | نظام إدارة المتاجر المتكامل",
-  description: "نظام متكامل لإدارة المتاجر والفواتير والمخزون والعملاء",
+  title: "Warehouse Management System",
+  description: "Manage your warehouse inventory efficiently",
 };
 
 export default function RootLayout({
@@ -22,13 +16,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body className={`${cairo.className} antialiased`}>
-        <Providers>
-          <TooltipProvider delayDuration={0}>
-            <LayoutWrapper>{children}</LayoutWrapper>
-          </TooltipProvider>
-        </Providers>
+    <html lang="en">
+      <body className={inter.className}>
+        {children}
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );
