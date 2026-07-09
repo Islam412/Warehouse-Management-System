@@ -5,43 +5,47 @@ import uuid
 from accounts.models import User
 
 class Notification(models.Model):
-    """نموذج الإشعارات"""
     NOTIFICATION_TYPES = (
         ('info', 'معلومات'),
         ('success', 'نجاح'),
         ('warning', 'تحذير'),
         ('error', 'خطأ'),
-        ('stock_alert', 'تنبيه مخزون'),
         ('payment_due', 'موعد دفع'),
         ('collection_due', 'موعد تحصيل'),
-        ('order_received', 'استلام طلب'),
+        ('shipment_due', 'موعد شحنة'),
+        ('stock_alert', 'تنبيه مخزون'),
         ('system', 'نظام'),
+    )
+    
+    PRIORITY = (
+        ('low', 'منخفض'),
+        ('medium', 'متوسط'),
+        ('high', 'عالي'),
+        ('urgent', 'عاجل'),
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200, verbose_name="العنوان")
     message = models.TextField(verbose_name="الرسالة")
-    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='info', verbose_name="نوع الإشعار")
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='info')
+    priority = models.CharField(max_length=10, choices=PRIORITY, default='medium')
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', verbose_name="المستخدم")
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, related_name='notifications')
     
-    is_read = models.BooleanField(default=False, verbose_name="مقروء")
-    is_sent = models.BooleanField(default=False, verbose_name="تم الإرسال")
+    is_read = models.BooleanField(default=False)
+    is_sent = models.BooleanField(default=False)
     
-    link = models.CharField(max_length=500, blank=True, null=True, verbose_name="الرابط")
+    reference_type = models.CharField(max_length=50, blank=True, null=True)
+    reference_id = models.UUIDField(blank=True, null=True)
+    extra_data = models.JSONField(default=dict, blank=True)
     
-    reference_type = models.CharField(max_length=50, blank=True, null=True, verbose_name="نوع المرجع")
-    reference_id = models.UUIDField(blank=True, null=True, verbose_name="معرف المرجع")
-    extra_data = models.JSONField(default=dict, blank=True, verbose_name="بيانات إضافية")
-    
+    due_date = models.DateTimeField(blank=True, null=True, verbose_name="تاريخ الاستحقاق")
     created_at = models.DateTimeField(auto_now_add=True)
-    read_at = models.DateTimeField(blank=True, null=True, verbose_name="تاريخ القراءة")
-    sent_at = models.DateTimeField(blank=True, null=True, verbose_name="تاريخ الإرسال")
+    read_at = models.DateTimeField(blank=True, null=True)
+    sent_at = models.DateTimeField(blank=True, null=True)
     
     class Meta:
         db_table = 'notifications'
-        verbose_name = "إشعار"
-        verbose_name_plural = "الإشعارات"
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', 'is_read']),
@@ -52,21 +56,20 @@ class Notification(models.Model):
         return f"{self.title} - {self.user.username}"
     
     def mark_as_read(self):
-        """تحديد الإشعار كمقروء"""
         self.is_read = True
         self.read_at = timezone.now()
         self.save()
     
     def mark_as_sent(self):
-        """تحديد الإشعار كمرسل"""
         self.is_sent = True
         self.sent_at = timezone.now()
         self.save()
 
+
 class NotificationPreference(models.Model):
     """تفضيلات الإشعارات للمستخدم"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_preferences')
+    user = models.OneToOneField('accounts.User', on_delete=models.CASCADE, related_name='notification_preferences')
     
     enable_notifications = models.BooleanField(default=True, verbose_name="تفعيل الإشعارات")
     enable_email = models.BooleanField(default=True, verbose_name="إشعارات البريد الإلكتروني")
@@ -88,6 +91,7 @@ class NotificationPreference(models.Model):
     
     def __str__(self):
         return f"Preferences - {self.user.username}"
+
 
 class NotificationLog(models.Model):
     """سجل إرسال الإشعارات"""
