@@ -17,10 +17,10 @@ export default function HomePage() {
   }, [router]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="flex h-screen items-center justify-center">
       <div className="text-center">
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="mt-4 text-gray-500">جاري التحميل...</p>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+        <p className="mt-4 text-muted-foreground">جاري التحويل...</p>
       </div>
     </div>
   );
