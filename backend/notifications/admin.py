@@ -6,15 +6,16 @@ from .models import Notification, NotificationPreference, NotificationLog
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
     """إدارة الإشعارات"""
-    list_display = ['title', 'user', 'notification_type_display', 'is_read_display', 'is_sent_display', 'created_at']
-    list_filter = ['notification_type', 'is_read', 'is_sent', 'created_at']
+    list_display = ['title', 'user', 'notification_type_display', 'priority_display', 
+                   'is_read_display', 'is_sent_display', 'created_at']
+    list_filter = ['notification_type', 'priority', 'is_read', 'is_sent', 'created_at']
     search_fields = ['title', 'message', 'user__username', 'user__email']
     readonly_fields = ['id', 'created_at', 'read_at', 'sent_at']
     ordering = ['-created_at']
     
     fieldsets = (
         (_('معلومات الإشعار'), {
-            'fields': ('id', 'title', 'message', 'notification_type')
+            'fields': ('id', 'title', 'message', 'notification_type', 'priority')
         }),
         (_('المستخدم'), {
             'fields': ('user',)
@@ -23,7 +24,10 @@ class NotificationAdmin(admin.ModelAdmin):
             'fields': ('is_read', 'is_sent', 'read_at', 'sent_at')
         }),
         (_('المرجع'), {
-            'fields': ('link', 'reference_type', 'reference_id', 'extra_data')
+            'fields': ('reference_type', 'reference_id', 'extra_data')
+        }),
+        (_('موعد الاستحقاق'), {
+            'fields': ('due_date',)
         }),
         (_('معلومات النظام'), {
             'fields': ('created_at',),
@@ -37,16 +41,30 @@ class NotificationAdmin(admin.ModelAdmin):
             'success': '#28a745',
             'warning': '#ffc107',
             'error': '#dc3545',
+            'payment_due': '#dc3545',
+            'collection_due': '#6f42c1',
+            'shipment_due': '#17a2b8',
             'stock_alert': '#fd7e14',
-            'payment_due': '#6f42c1',
-            'collection_due': '#20c997',
-            'order_received': '#28a745',
             'system': '#6c757d',
         }
         color = colors.get(obj.notification_type, '#6c757d')
         return format_html('<span style="color: {}; font-weight: bold;">{}</span>', 
                           color, obj.get_notification_type_display())
     notification_type_display.short_description = _('النوع')
+    
+    def priority_display(self, obj):
+        colors = {
+            'low': '#6c757d',
+            'medium': '#17a2b8',
+            'high': '#ffc107',
+            'urgent': '#dc3545',
+        }
+        color = colors.get(obj.priority, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold; background: {}20; padding: 2px 8px; border-radius: 4px;">{}</span>',
+            color, color, obj.get_priority_display()
+        )
+    priority_display.short_description = _('الأولوية')
     
     def is_read_display(self, obj):
         if obj.is_read:
@@ -86,6 +104,22 @@ class NotificationPreferenceAdmin(admin.ModelAdmin):
     readonly_fields = ['id', 'created_at', 'updated_at']
     raw_id_fields = ['user']
     
+    fieldsets = (
+        (_('المستخدم'), {
+            'fields': ('user',)
+        }),
+        (_('الإعدادات العامة'), {
+            'fields': ('enable_notifications', 'enable_email', 'enable_push')
+        }),
+        (_('أنواع الإشعارات'), {
+            'fields': ('stock_alert', 'payment_due', 'collection_due', 'order_received', 'system_updates')
+        }),
+        (_('معلومات النظام'), {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
     def enable_notifications_display(self, obj):
         return format_html(
             '<span style="color: {};">{}</span>',
@@ -103,6 +137,22 @@ class NotificationLogAdmin(admin.ModelAdmin):
     readonly_fields = ['id', 'created_at']
     ordering = ['-created_at']
     
+    fieldsets = (
+        (_('الإشعار'), {
+            'fields': ('notification',)
+        }),
+        (_('قناة الإرسال'), {
+            'fields': ('channel',)
+        }),
+        (_('الحالة'), {
+            'fields': ('status', 'response', 'error')
+        }),
+        (_('معلومات النظام'), {
+            'fields': ('created_at', 'sent_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
     def channel_display(self, obj):
         return obj.get_channel_display()
     channel_display.short_description = _('القناة')
@@ -114,5 +164,8 @@ class NotificationLogAdmin(admin.ModelAdmin):
             'failed': '#dc3545',
         }
         color = colors.get(obj.status, '#6c757d')
-        return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, obj.status)
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_status_display() if hasattr(obj, 'get_status_display') else obj.status
+        )
     status_display.short_description = _('الحالة')
