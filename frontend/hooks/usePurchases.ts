@@ -2,6 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { purchasesApi } from '@/lib/api/endpoints/purchases';
 import { toast } from 'sonner';
 
+// ============================================
+// Purchases Hooks
+// ============================================
+
 export const usePurchases = (params?: any) => {
   return useQuery({
     queryKey: ['purchases', params],
@@ -15,7 +19,7 @@ export const usePurchases = (params?: any) => {
         return [];
       } catch (error) {
         console.error('❌ Error loading purchases:', error);
-        throw error;
+        return [];
       }
     },
     staleTime: 30000,
@@ -28,11 +32,17 @@ export const usePurchase = (id: string) => {
   return useQuery({
     queryKey: ['purchase', id],
     queryFn: async () => {
-      const response = await purchasesApi.getById(id);
-      return response.data;
+      try {
+        const response = await purchasesApi.getById(id);
+        return response.data;
+      } catch (error) {
+        console.error(`❌ Error loading purchase ${id}:`, error);
+        throw error;
+      }
     },
     enabled: !!id,
     staleTime: 60000,
+    retry: 1,
   });
 };
 
