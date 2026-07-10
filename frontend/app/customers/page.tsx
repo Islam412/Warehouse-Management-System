@@ -1,8 +1,16 @@
 // frontend/app/customers/page.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useCustomers, useDeleteCustomer, useVIPCustomers, useTopSpenders } from '@/hooks/useCustomers';
+import { useState, useMemo, useEffect } from 'react';
+import { 
+  useCustomers, 
+  useDeleteCustomer,
+  useCustomerStats,
+  useCustomerDistribution,
+  useInactiveCustomers,
+  useLoyalCustomers,
+  useCustomerComparison
+} from '@/hooks/useCustomers';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,11 +65,8 @@ import {
   CreditCard,
   TrendingUp,
   TrendingDown,
-  UserCheck,
-  UserX,
   Award,
   Crown,
-  Shield,
   AlertCircle,
   CheckCircle,
   DollarSign,
@@ -69,19 +74,17 @@ import {
   PieChart as PieChartIcon,
   MapPin,
   Calendar,
-  Clock,
-  UserPlus,
   UserMinus,
   Activity,
-  Zap,
   Target,
   Brain,
-  FileText,
   Layers,
-  Grid3x3,
-  List,
-  Sparkles,
-  Flame
+  Flame,
+  Shield,
+  UserCheck,
+  UserX,
+  Zap,
+  Sparkles
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -97,8 +100,6 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  LineChart,
-  Line,
   AreaChart,
   Area,
   RadarChart,
@@ -106,8 +107,6 @@ import {
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
-  ComposedChart,
-  Scatter,
 } from 'recharts';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'];
@@ -122,85 +121,83 @@ export default function CustomersPage() {
   const [editKey, setEditKey] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
 
+  // ============================================
+  // 📊 جلب البيانات من الـ API
+  // ============================================
+  
   const { data: customersData, isLoading, error, refetch } = useCustomers({ search });
-  const { data: vipData } = useVIPCustomers();
-  const { data: topSpenders } = useTopSpenders();
+  const { data: statsData, isLoading: statsLoading } = useCustomerStats();
+  const { data: distributionData, isLoading: distLoading } = useCustomerDistribution();
+  const { data: inactiveData, isLoading: inactiveLoading } = useInactiveCustomers();
+  const { data: loyalData, isLoading: loyalLoading } = useLoyalCustomers();
+  const { data: comparisonData, isLoading: comparisonLoading } = useCustomerComparison();
   const deleteCustomer = useDeleteCustomer();
 
   const customers = Array.isArray(customersData) ? customersData : 
                      customersData?.results ? customersData.results : [];
 
   // ============================================
-  // 📊 تحليلات العملاء المتقدمة
+  // 📊 استخدام البيانات الحقيقية من الـ API
   // ============================================
 
-  // 1. العملاء المميزين (VIP)
+  // إحصائيات العملاء
+  const stats = statsData || {
+    total: 0,
+    vip: 0,
+    regular: 0,
+    blocked: 0,
+    with_debt: 0,
+    with_credit: 0,
+    total_debt: 0,
+    avg_spending: 0,
+    avg_balance: 0,
+  };
+
+  // توزيع العملاء حسب المدينة
+  const cityDistribution = distributionData?.city_distribution || [];
+  
+  // العملاء الجدد حسب الشهر
+  const registrationData = distributionData?.registration_trend || [];
+
+  // العملاء غير النشطين
+  const inactiveCustomers = inactiveData || [];
+
+  // العملاء الأكثر ولاءً
+  const loyalCustomers = loyalData || [];
+
+  // مقارنة VIP vs عاديين
+  const comparison = comparisonData || {
+    vip_count: 0,
+    regular_count: 0,
+    avg_vip_purchase: 0,
+    avg_regular_purchase: 0,
+    avg_vip_balance: 0,
+    avg_regular_balance: 0,
+    vip_total_purchases: 0,
+    regular_total_purchases: 0,
+  };
+
+  // ============================================
+  // 📊 تحليلات محلية إضافية
+  // ============================================
+
+  // العملاء المميزين (VIP)
   const vipCustomers = customers.filter(c => c.is_vip && c.is_active);
   
-  // 2. العملاء العاديين
+  // العملاء العاديين (غير VIP ونشطين)
   const regularCustomers = customers.filter(c => !c.is_vip && c.is_active);
   
-  // 3. العملاء المحظورين
+  // العملاء المحظورين
   const blockedCustomers = customers.filter(c => !c.is_active);
   
-  // 4. العملاء الذين عليهم أقساط (رصيد سالب)
+  // العملاء الذين عليهم أقساط
   const customersWithDebt = customers.filter(c => parseFloat(c.balance || 0) < 0);
   
-  // 5. العملاء الذين لديهم رصيد إيجابي
+  // العملاء الذين لديهم رصيد إيجابي
   const customersWithCredit = customers.filter(c => parseFloat(c.balance || 0) > 0);
 
-  // ============================================
-  // 📍 توزيع العملاء حسب المدينة
-  // ============================================
-  const cityDistribution = useMemo(() => {
-    const cities: Record<string, number> = {};
-    customers.forEach(c => {
-      if (c.address) {
-        // استخراج المدينة من العنوان
-        const city = c.address.split(',')[0]?.trim() || 'غير محدد';
-        cities[city] = (cities[city] || 0) + 1;
-      } else {
-        cities['غير محدد'] = (cities['غير محدد'] || 0) + 1;
-      }
-    });
-    return Object.entries(cities)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
-  }, [customers]);
-
-  // ============================================
-  // 📅 العملاء حسب تاريخ التسجيل
-  // ============================================
-  const registrationData = useMemo(() => {
-    const now = new Date();
-    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-    const data: Record<string, number> = {};
-    
-    // آخر 6 أشهر
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${months[date.getMonth()]} ${date.getFullYear()}`;
-      data[key] = 0;
-    }
-    
-    customers.forEach(c => {
-      if (c.created_at) {
-        const date = new Date(c.created_at);
-        const key = `${months[date.getMonth()]} ${date.getFullYear()}`;
-        if (data[key] !== undefined) {
-          data[key]++;
-        }
-      }
-    });
-    
-    return Object.entries(data).map(([name, value]) => ({ name, value }));
-  }, [customers]);
-
-  // ============================================
-  // 🏆 العملاء الأكثر تفاعل (آخر 30 يوم)
-  // ============================================
-  const topInteractiveLast30 = useMemo(() => {
+  // العملاء الأكثر تفاعل (من البيانات المحلية)
+  const topInteractive = useMemo(() => {
     return [...customers]
       .filter(c => c.is_active)
       .sort((a, b) => parseFloat(b.total_purchases || 0) - parseFloat(a.total_purchases || 0))
@@ -208,29 +205,25 @@ export default function CustomersPage() {
   }, [customers]);
 
   // ============================================
-  // ⏰ العملاء غير النشطين (لم يشتروا منذ فترة)
+  // 📊 بيانات الرسوم البيانية
   // ============================================
-  const inactiveCustomers = useMemo(() => {
-    const now = new Date();
-    return customers
-      .filter(c => c.is_active)
-      .filter(c => {
-        if (!c.updated_at) return true;
-        const lastUpdate = new Date(c.updated_at);
-        const daysDiff = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
-        return daysDiff > 30; // أكثر من 30 يوم بدون نشاط
-      })
-      .sort((a, b) => {
-        const dateA = a.updated_at ? new Date(a.updated_at) : new Date(0);
-        const dateB = b.updated_at ? new Date(b.updated_at) : new Date(0);
-        return dateA.getTime() - dateB.getTime();
-      })
-      .slice(0, 10);
-  }, [customers]);
 
-  // ============================================
-  // 📊 مقارنة VIP vs عاديين
-  // ============================================
+  // توزيع العملاء (VIP / عاديين / محظورين)
+  const pieData = [
+    { name: 'مميزين (VIP)', value: vipCustomers.length || 0 },
+    { name: 'عاديين', value: regularCustomers.length || 0 },
+    { name: 'محظورين', value: blockedCustomers.length || 0 },
+  ];
+
+  // بيانات الأقساط
+  const debtData = customersWithDebt
+    .slice(0, 10)
+    .map(c => ({
+      name: c.name.length > 10 ? c.name.substring(0, 10) + '...' : c.name,
+      debt: Math.abs(parseFloat(c.balance || 0)),
+    }));
+
+  // بيانات الرادار للمقارنة (VIP vs عاديين فقط)
   const vipComparison = useMemo(() => {
     const vip = customers.filter(c => c.is_vip && c.is_active);
     const regular = customers.filter(c => !c.is_vip && c.is_active);
@@ -261,9 +254,30 @@ export default function CustomersPage() {
     };
   }, [customers]);
 
-  // ============================================
-  // 📈 توزيع العملاء حسب مستوى الإنفاق
-  // ============================================
+  const radarData = [
+    { 
+      subject: 'متوسط المشتريات', 
+      VIP: vipComparison.avgVipPurchase || 0, 
+      Regular: vipComparison.avgRegularPurchase || 0 
+    },
+    { 
+      subject: 'متوسط الرصيد', 
+      VIP: Math.abs(vipComparison.avgVipBalance || 0), 
+      Regular: Math.abs(vipComparison.avgRegularBalance || 0) 
+    },
+    { 
+      subject: 'عدد العملاء', 
+      VIP: vipComparison.vipCount || 0, 
+      Regular: vipComparison.regularCount || 0 
+    },
+    { 
+      subject: 'إجمالي المشتريات', 
+      VIP: vipComparison.vipTotalPurchases || 0, 
+      Regular: vipComparison.regularTotalPurchases || 0 
+    },
+  ];
+
+  // مستوى الإنفاق
   const spendingLevels = useMemo(() => {
     const levels = {
       'منخفض (0-500)': 0,
@@ -284,18 +298,9 @@ export default function CustomersPage() {
   }, [customers]);
 
   // ============================================
-  // 🔥 العملاء الأكثر ولاءً (عدد الفواتير)
+  // 📊 إحصائيات محسوبة
   // ============================================
-  const loyalCustomers = useMemo(() => {
-    return [...customers]
-      .filter(c => c.is_active)
-      .sort((a, b) => (b.total_invoices || 0) - (a.total_invoices || 0))
-      .slice(0, 10);
-  }, [customers]);
-
-  // ============================================
-  // 📊 إحصائيات عامة محسنة
-  // ============================================
+  
   const totalCustomers = customers.length;
   const totalVIP = vipCustomers.length;
   const totalRegular = regularCustomers.length;
@@ -310,26 +315,9 @@ export default function CustomersPage() {
     ? customers.reduce((sum, c) => sum + parseFloat(c.balance || 0), 0) / customers.length 
     : 0;
 
-  // بيانات الرسم البياني لتوزيع العملاء
-  const distributionData = [
-    { name: 'مميزين (VIP)', value: totalVIP },
-    { name: 'عاديين', value: totalRegular },
-    { name: 'محظورين', value: totalBlocked },
-  ];
-
-  // بيانات الرسم البياني للأقساط
-  const debtData = customersWithDebt.slice(0, 10).map(c => ({
-    name: c.name.length > 10 ? c.name.substring(0, 10) + '...' : c.name,
-    debt: Math.abs(parseFloat(c.balance || 0)),
-  }));
-
-  // بيانات مقارنة VIP vs عاديين للرادار
-  const radarData = [
-    { subject: 'متوسط المشتريات', VIP: vipComparison.avgVipPurchase, Regular: vipComparison.avgRegularPurchase },
-    { subject: 'متوسط الرصيد', VIP: Math.abs(vipComparison.avgVipBalance), Regular: Math.abs(vipComparison.avgRegularBalance) },
-    { subject: 'عدد العملاء', VIP: vipComparison.vipCount, Regular: vipComparison.regularCount },
-    { subject: 'إجمالي المشتريات', VIP: vipComparison.vipTotalPurchases, Regular: vipComparison.regularTotalPurchases },
-  ];
+  // ============================================
+  // 📋 دوال المعالجة
+  // ============================================
 
   const handleDelete = async () => {
     if (!customerToDelete) return;
@@ -355,7 +343,11 @@ export default function CustomersPage() {
     toast.info('تم تحديث البيانات');
   };
 
-  if (isLoading) {
+  // ============================================
+  // 🖥️ حالة التحميل
+  // ============================================
+
+  if (isLoading || statsLoading || distLoading || inactiveLoading || loyalLoading || comparisonLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -372,6 +364,10 @@ export default function CustomersPage() {
       </div>
     );
   }
+
+  // ============================================
+  // 🎨 واجهة المستخدم
+  // ============================================
 
   return (
     <div className="space-y-6">
@@ -413,7 +409,7 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      {/* 📊 بطاقات الإحصائيات المحسنة */}
+      {/* 📊 بطاقات الإحصائيات */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         <Card>
           <CardContent className="pt-6">
@@ -513,7 +509,9 @@ export default function CustomersPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* التبويب 1: نظرة عامة */}
+        {/* ============================================
+            التبويب 1: نظرة عامة
+            ============================================ */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* توزيع العملاء */}
@@ -530,7 +528,7 @@ export default function CustomersPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={distributionData}
+                        data={pieData}
                         cx="50%"
                         cy="50%"
                         innerRadius={60}
@@ -539,7 +537,7 @@ export default function CustomersPage() {
                         dataKey="value"
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
-                        {distributionData.map((entry, index) => (
+                        {pieData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
@@ -547,6 +545,20 @@ export default function CustomersPage() {
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+                  <div className="p-2 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+                    <p className="text-xs text-amber-600">VIP</p>
+                    <p className="text-lg font-bold text-amber-700">{totalVIP}</p>
+                  </div>
+                  <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                    <p className="text-xs text-blue-600">عاديين</p>
+                    <p className="text-lg font-bold text-blue-700">{totalRegular}</p>
+                  </div>
+                  <div className="p-2 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                    <p className="text-xs text-red-600">محظورين</p>
+                    <p className="text-lg font-bold text-red-700">{totalBlocked}</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -611,7 +623,9 @@ export default function CustomersPage() {
           </Card>
         </TabsContent>
 
-        {/* التبويب 2: توزيع العملاء */}
+        {/* ============================================
+            التبويب 2: توزيع العملاء
+            ============================================ */}
         <TabsContent value="distribution" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* توزيع حسب المدينة */}
@@ -655,31 +669,39 @@ export default function CustomersPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={registrationData}>
-                      <defs>
-                        <linearGradient id="registrationGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" fontSize={10} tickLine={false} />
-                      <YAxis fontSize={10} tickLine={false} />
-                      <Tooltip />
-                      <Area type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} fill="url(#registrationGradient)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {registrationData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-gray-500">
+                      <p>لا توجد بيانات</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={registrationData}>
+                        <defs>
+                          <linearGradient id="registrationGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" fontSize={10} tickLine={false} />
+                        <YAxis fontSize={10} tickLine={false} />
+                        <Tooltip />
+                        <Area type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} fill="url(#registrationGradient)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        {/* التبويب 3: مقارنة VIP */}
+        {/* ============================================
+            التبويب 3: مقارنة VIP vs عاديين
+            ============================================ */}
         <TabsContent value="comparison" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* بطاقات مقارنة */}
+            {/* بطاقات مقارنة VIP vs عاديين */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-amber-600">
@@ -692,16 +714,25 @@ export default function CustomersPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                      <p className="text-xs text-amber-600">المميزين (VIP)</p>
-                      <p className="text-xl font-bold text-amber-700">{vipComparison.vipCount}</p>
+                      <div className="flex items-center gap-2">
+                        <Crown className="w-4 h-4 text-amber-500" />
+                        <p className="text-xs text-amber-600">المميزين (VIP)</p>
+                      </div>
+                      <p className="text-xl font-bold text-amber-700">{totalVIP}</p>
                       <p className="text-xs text-gray-500">متوسط الشراء: {vipComparison.avgVipPurchase.toFixed(2)} ج.م</p>
+                      <p className="text-xs text-gray-500">متوسط الرصيد: {vipComparison.avgVipBalance.toFixed(2)} ج.م</p>
                     </div>
                     <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <p className="text-xs text-blue-600">العاديين</p>
-                      <p className="text-xl font-bold text-blue-700">{vipComparison.regularCount}</p>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-blue-500" />
+                        <p className="text-xs text-blue-600">العاديين</p>
+                      </div>
+                      <p className="text-xl font-bold text-blue-700">{totalRegular}</p>
                       <p className="text-xs text-gray-500">متوسط الشراء: {vipComparison.avgRegularPurchase.toFixed(2)} ج.م</p>
+                      <p className="text-xs text-gray-500">متوسط الرصيد: {vipComparison.avgRegularBalance.toFixed(2)} ج.م</p>
                     </div>
                   </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
                       <p className="text-xs text-green-600">إجمالي مشتريات VIP</p>
@@ -710,6 +741,26 @@ export default function CustomersPage() {
                     <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
                       <p className="text-xs text-purple-600">إجمالي مشتريات العاديين</p>
                       <p className="text-lg font-bold text-purple-700">{vipComparison.regularTotalPurchases.toFixed(2)} ج.م</p>
+                    </div>
+                  </div>
+
+                  {/* نسبة VIP */}
+                  <div className="p-3 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                    <p className="text-xs text-indigo-600">نسبة VIP إلى إجمالي العملاء النشطين</p>
+                    <p className="text-lg font-bold text-indigo-700">
+                      {totalVIP > 0 && totalRegular > 0
+                        ? ((totalVIP / (totalVIP + totalRegular)) * 100).toFixed(1)
+                        : 0}%
+                    </p>
+                    <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full mt-2 overflow-hidden">
+                      <div 
+                        className="h-full bg-amber-500 rounded-full transition-all duration-1000"
+                        style={{ 
+                          width: `${totalVIP > 0 && totalRegular > 0
+                            ? (totalVIP / (totalVIP + totalRegular)) * 100
+                            : 0}%` 
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -723,7 +774,7 @@ export default function CustomersPage() {
                   <Brain className="w-5 h-5" />
                   تحليل الأداء (VIP vs عاديين)
                 </CardTitle>
-                <CardDescription>مقارنة أداء المميزين مقابل العاديين</CardDescription>
+                <CardDescription>مقارنة أداء المميزين مقابل العاديين في 4 محاور</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -732,8 +783,20 @@ export default function CustomersPage() {
                       <PolarGrid />
                       <PolarAngleAxis dataKey="subject" fontSize={10} />
                       <PolarRadiusAxis fontSize={10} />
-                      <Radar name="VIP" dataKey="VIP" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} />
-                      <Radar name="Regular" dataKey="Regular" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
+                      <Radar 
+                        name="VIP" 
+                        dataKey="VIP" 
+                        stroke="#f59e0b" 
+                        fill="#f59e0b" 
+                        fillOpacity={0.2} 
+                      />
+                      <Radar 
+                        name="Regular" 
+                        dataKey="Regular" 
+                        stroke="#3b82f6" 
+                        fill="#3b82f6" 
+                        fillOpacity={0.2} 
+                      />
                       <Legend />
                       <Tooltip />
                     </RadarChart>
@@ -742,24 +805,93 @@ export default function CustomersPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* جدول مقارنة تفصيلي */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-600">
+                <Layers className="w-5 h-5" />
+                جدول المقارنة التفصيلي
+              </CardTitle>
+              <CardDescription>مقارنة تفصيلية بين العملاء المميزين والعاديين</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-right p-2 font-medium">المعيار</th>
+                      <th className="text-center p-2 font-medium text-amber-600">VIP</th>
+                      <th className="text-center p-2 font-medium text-blue-600">عاديين</th>
+                      <th className="text-center p-2 font-medium">الفارق</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="p-2">عدد العملاء</td>
+                      <td className="text-center p-2 font-bold text-amber-600">{totalVIP}</td>
+                      <td className="text-center p-2 font-bold text-blue-600">{totalRegular}</td>
+                      <td className="text-center p-2">
+                        <span className={totalVIP > totalRegular ? 'text-green-600' : 'text-red-600'}>
+                          {totalVIP - totalRegular}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-2">متوسط المشتريات</td>
+                      <td className="text-center p-2 font-bold text-amber-600">{vipComparison.avgVipPurchase.toFixed(2)} ج.م</td>
+                      <td className="text-center p-2 font-bold text-blue-600">{vipComparison.avgRegularPurchase.toFixed(2)} ج.م</td>
+                      <td className="text-center p-2">
+                        <span className={vipComparison.avgVipPurchase > vipComparison.avgRegularPurchase ? 'text-green-600' : 'text-red-600'}>
+                          {(vipComparison.avgVipPurchase - vipComparison.avgRegularPurchase).toFixed(2)} ج.م
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-2">متوسط الرصيد</td>
+                      <td className="text-center p-2 font-bold text-amber-600">{vipComparison.avgVipBalance.toFixed(2)} ج.م</td>
+                      <td className="text-center p-2 font-bold text-blue-600">{vipComparison.avgRegularBalance.toFixed(2)} ج.م</td>
+                      <td className="text-center p-2">
+                        <span className={vipComparison.avgVipBalance > vipComparison.avgRegularBalance ? 'text-green-600' : 'text-red-600'}>
+                          {(vipComparison.avgVipBalance - vipComparison.avgRegularBalance).toFixed(2)} ج.م
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-2">إجمالي المشتريات</td>
+                      <td className="text-center p-2 font-bold text-amber-600">{vipComparison.vipTotalPurchases.toFixed(2)} ج.م</td>
+                      <td className="text-center p-2 font-bold text-blue-600">{vipComparison.regularTotalPurchases.toFixed(2)} ج.م</td>
+                      <td className="text-center p-2">
+                        <span className={vipComparison.vipTotalPurchases > vipComparison.regularTotalPurchases ? 'text-green-600' : 'text-red-600'}>
+                          {(vipComparison.vipTotalPurchases - vipComparison.regularTotalPurchases).toFixed(2)} ج.م
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* التبويب 4: الأكثر تفاعل */}
+        {/* ============================================
+            التبويب 4: الأكثر تفاعل
+            ============================================ */}
         <TabsContent value="top" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-600">
                 <Flame className="w-5 h-5" />
-                العملاء الأكثر تفاعل (آخر 30 يوم)
+                العملاء الأكثر تفاعل
               </CardTitle>
-              <CardDescription>العملاء الأكثر نشاطاً في الفترة الأخيرة</CardDescription>
+              <CardDescription>العملاء الأكثر نشاطاً في المشتريات</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {topInteractiveLast30.length === 0 ? (
+                {topInteractive.length === 0 ? (
                   <p className="text-center text-gray-500 py-4">لا توجد بيانات</p>
                 ) : (
-                  topInteractiveLast30.map((customer, index) => (
+                  topInteractive.map((customer, index) => (
                     <div key={customer.id} className="flex items-center justify-between p-3 hover:bg-muted rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
                         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${
@@ -788,7 +920,9 @@ export default function CustomersPage() {
           </Card>
         </TabsContent>
 
-        {/* التبويب 5: غير نشطين */}
+        {/* ============================================
+            التبويب 5: غير نشطين
+            ============================================ */}
         <TabsContent value="inactive" className="space-y-6">
           <Card>
             <CardHeader>
@@ -796,7 +930,7 @@ export default function CustomersPage() {
                 <UserMinus className="w-5 h-5" />
                 العملاء غير النشطين
               </CardTitle>
-              <CardDescription>عملاء لم يقوموا بأي عملية شراء منذ أكثر من 30 يوم</CardDescription>
+              <CardDescription>عملاء لم يقوموا بأي عملية شراء منذ فترة طويلة</CardDescription>
             </CardHeader>
             <CardContent>
               {inactiveCustomers.length === 0 ? (
@@ -806,7 +940,7 @@ export default function CustomersPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {inactiveCustomers.map((customer, index) => {
+                  {inactiveCustomers.slice(0, 10).map((customer, index) => {
                     const daysInactive = customer.updated_at 
                       ? Math.floor((new Date().getTime() - new Date(customer.updated_at).getTime()) / (1000 * 60 * 60 * 24))
                       : 0;
@@ -832,7 +966,9 @@ export default function CustomersPage() {
           </Card>
         </TabsContent>
 
-        {/* التبويب 6: الأكثر ولاءً */}
+        {/* ============================================
+            التبويب 6: الأكثر ولاءً
+            ============================================ */}
         <TabsContent value="loyal" className="space-y-6">
           <Card>
             <CardHeader>
@@ -847,7 +983,7 @@ export default function CustomersPage() {
                 {loyalCustomers.length === 0 ? (
                   <p className="text-center text-gray-500 py-4">لا توجد بيانات</p>
                 ) : (
-                  loyalCustomers.map((customer, index) => (
+                  loyalCustomers.slice(0, 10).map((customer, index) => (
                     <div key={customer.id} className="flex items-center justify-between p-3 hover:bg-muted rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
                         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${
