@@ -1,3 +1,4 @@
+// frontend/app/products/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -40,7 +41,22 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { ProductForm } from '@/components/forms/ProductForm';
-import { Plus, Search, Eye, Edit, Trash2, Loader2, RefreshCw, Printer } from 'lucide-react';
+import { 
+  Plus, 
+  Search, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  Loader2, 
+  RefreshCw, 
+  Printer,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  Package,
+  AlertCircle,
+  CheckCircle
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -58,6 +74,35 @@ export default function ProductsPage() {
 
   const products = Array.isArray(productsData) ? productsData : 
                      productsData?.results ? productsData.results : [];
+
+  // ============================================
+  // 📊 تحليل المنتجات
+  // ============================================
+  
+  // 1. المنتجات الأكثر مبيعاً (حسب السعر الأعلى)
+  const mostSold = [...products].sort((a, b) => (b.selling_price || 0) - (a.selling_price || 0)).slice(0, 5);
+  
+  // 2. المنتجات الأقل مبيعاً (حسب السعر الأقل)
+  const leastSold = [...products].sort((a, b) => (a.selling_price || 0) - (b.selling_price || 0)).slice(0, 5);
+  
+  // 3. المنتجات الأكثر ربحية (هامش ربح أعلى)
+  const mostProfitable = [...products]
+    .filter(p => p.purchase_price > 0)
+    .sort((a, b) => {
+      const marginA = ((a.selling_price - a.purchase_price) / a.purchase_price) * 100;
+      const marginB = ((b.selling_price - b.purchase_price) / b.purchase_price) * 100;
+      return marginB - marginA;
+    })
+    .slice(0, 5);
+  
+  // 4. المنتجات منخفضة المخزون
+  const lowStockProducts = products.filter(p => p.has_stock === false || p.is_active === false).slice(0, 5);
+  
+  // 5. إحصائيات عامة
+  const totalProducts = products.length;
+  const activeProducts = products.filter(p => p.is_active).length;
+  const featuredProducts = products.filter(p => p.is_featured).length;
+  const outOfStock = products.filter(p => !p.has_stock).length;
 
   const handleDelete = async () => {
     if (!productToDelete) return;
@@ -103,6 +148,7 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
+      {/* الرأس */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">المنتجات</h1>
@@ -140,6 +186,181 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      {/* 📊 بطاقات التحليل والإحصائيات */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">إجمالي المنتجات</p>
+                <p className="text-2xl font-bold">{totalProducts}</p>
+              </div>
+              <Package className="w-8 h-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">نشطة</p>
+                <p className="text-2xl font-bold text-green-600">{activeProducts}</p>
+              </div>
+              <CheckCircle className="w-8 h-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">مميزة</p>
+                <p className="text-2xl font-bold text-amber-600">{featuredProducts}</p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-amber-500" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">غير متوفرة</p>
+                <p className="text-2xl font-bold text-red-600">{outOfStock}</p>
+              </div>
+              <AlertCircle className="w-8 h-8 text-red-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 📊 تحليل المنتجات - الأكثر والأقل مبيعاً */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* الأكثر مبيعاً */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-600">
+              <TrendingUp className="w-5 h-5" />
+              المنتجات الأكثر مبيعاً
+            </CardTitle>
+            <CardDescription>المنتجات الأعلى سعراً</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {mostSold.length === 0 ? (
+              <p className="text-center text-gray-500 py-4">لا توجد منتجات</p>
+            ) : (
+              <div className="space-y-3">
+                {mostSold.map((product, index) => (
+                  <div key={product.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                        index === 0 ? 'bg-yellow-500' : 
+                        index === 1 ? 'bg-gray-400' : 
+                        index === 2 ? 'bg-amber-600' : 'bg-blue-500'
+                      }`}>
+                        {index + 1}
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium">{product.name}</p>
+                        <p className="text-xs text-gray-500">{product.sku}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-green-600">{product.selling_price} ج.م</p>
+                      <p className="text-xs text-gray-500">هامش: {((product.selling_price - product.purchase_price) / product.purchase_price * 100).toFixed(1)}%</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* الأقل مبيعاً */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <TrendingDown className="w-5 h-5" />
+              المنتجات الأقل مبيعاً
+            </CardTitle>
+            <CardDescription>المنتجات الأقل سعراً</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {leastSold.length === 0 ? (
+              <p className="text-center text-gray-500 py-4">لا توجد منتجات</p>
+            ) : (
+              <div className="space-y-3">
+                {leastSold.map((product, index) => (
+                  <div key={product.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                        index === 0 ? 'bg-red-500' : 
+                        index === 1 ? 'bg-orange-400' : 
+                        index === 2 ? 'bg-yellow-500' : 'bg-gray-500'
+                      }`}>
+                        {index + 1}
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium">{product.name}</p>
+                        <p className="text-xs text-gray-500">{product.sku}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-red-600">{product.selling_price} ج.م</p>
+                      <p className="text-xs text-gray-500">هامش: {((product.selling_price - product.purchase_price) / product.purchase_price * 100).toFixed(1)}%</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 📊 المنتجات الأكثر ربحية */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-purple-600">
+            <BarChart3 className="w-5 h-5" />
+            المنتجات الأكثر ربحية
+          </CardTitle>
+          <CardDescription>المنتجات ذات هامش الربح الأعلى</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {mostProfitable.length === 0 ? (
+            <p className="text-center text-gray-500 py-4">لا توجد منتجات</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {mostProfitable.map((product, index) => {
+                const margin = ((product.selling_price - product.purchase_price) / product.purchase_price * 100);
+                return (
+                  <div key={product.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <span className={`px-2 py-1 rounded text-xs font-bold text-white ${
+                        index === 0 ? 'bg-purple-600' : 
+                        index === 1 ? 'bg-indigo-500' : 
+                        index === 2 ? 'bg-blue-500' : 'bg-gray-500'
+                      }`}>
+                        #{index + 1}
+                      </span>
+                      <span className={`text-sm font-bold ${margin > 50 ? 'text-green-600' : margin > 25 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {margin.toFixed(1)}% ربح
+                      </span>
+                    </div>
+                    <p className="font-medium mt-2">{product.name}</p>
+                    <div className="flex justify-between text-sm text-gray-500 mt-1">
+                      <span>شراء: {product.purchase_price} ج.م</span>
+                      <span>بيع: {product.selling_price} ج.م</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 🔍 البحث */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -153,6 +374,7 @@ export default function ProductsPage() {
         <span className="text-sm text-gray-500">{products.length} منتج</span>
       </div>
 
+      {/* 📋 قائمة المنتجات */}
       <Card>
         <CardHeader>
           <CardTitle>قائمة المنتجات</CardTitle>
@@ -199,9 +421,11 @@ export default function ProductsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="text-blue-500" title="عرض التفاصيل">
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <Link href={`/product/${product.id}`}>
+                          <Button variant="ghost" size="icon" className="text-blue-500" title="عرض التفاصيل">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </Link>
                         <Button variant="ghost" size="icon" className="text-amber-500" onClick={() => openEditDialog(product)} title="تعديل">
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -218,6 +442,7 @@ export default function ProductsPage() {
         </CardContent>
       </Card>
 
+      {/* Dialog الحذف */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -241,6 +466,7 @@ export default function ProductsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Dialog التعديل */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
