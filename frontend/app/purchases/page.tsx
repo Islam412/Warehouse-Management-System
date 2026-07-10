@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePurchases, useDeletePurchase } from '@/hooks/usePurchases';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -18,44 +19,75 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Eye, Loader2, RefreshCw, Printer } from 'lucide-react';
+import { Search, Eye, Loader2, RefreshCw, Printer, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+
+const statusColors: Record<string, string> = {
+  draft: 'bg-gray-500',
+  ordered: 'bg-blue-500',
+  received: 'bg-green-500',
+  cancelled: 'bg-red-500',
+};
+
+const statusLabels: Record<string, string> = {
+  draft: 'مسودة',
+  ordered: 'تم الطلب',
+  received: 'تم الاستلام',
+  cancelled: 'ملغي',
+};
 
 export default function PurchasesPage() {
   const [search, setSearch] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [purchaseToDelete, setPurchaseToDelete] = useState<any>(null);
 
-  // بيانات تجريبية
-  const purchases = [
-    { id: 1, order_number: 'PO-001', supplier: 'مورد إسلام الأول', total: 5000, status: 'received', date: '2026-07-08' },
-    { id: 2, order_number: 'PO-002', supplier: 'شركة النيل للتجارة', total: 3000, status: 'ordered', date: '2026-07-07' },
-    { id: 3, order_number: 'PO-003', supplier: 'مورد إسلام الثاني', total: 7000, status: 'draft', date: '2026-07-06' },
-  ];
+  const { data: purchasesData, isLoading, error, refetch } = usePurchases({ search });
+  const deletePurchase = useDeletePurchase();
 
-  const statusColors: Record<string, string> = {
-    draft: 'bg-gray-500',
-    ordered: 'bg-blue-500',
-    received: 'bg-green-500',
-    cancelled: 'bg-red-500',
+  const purchases = Array.isArray(purchasesData) ? purchasesData : 
+                     purchasesData?.results ? purchasesData.results : [];
+
+  const handleDelete = async () => {
+    if (!purchaseToDelete) return;
+    await deletePurchase.mutateAsync(purchaseToDelete.id);
+    setDeleteDialogOpen(false);
+    setPurchaseToDelete(null);
+    refetch();
   };
 
-  const statusLabels: Record<string, string> = {
-    draft: 'مسودة',
-    ordered: 'تم الطلب',
-    received: 'تم الاستلام',
-    cancelled: 'ملغي',
+  const handleRefresh = async () => {
+    await refetch();
+    toast.info('تم تحديث البيانات');
   };
 
-  const handleRefresh = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.info('تم تحديث البيانات');
-    }, 1000);
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
-  const handlePrint = () => window.print();
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <h3 className="text-lg font-semibold text-red-600">حدث خطأ في تحميل أوامر الشراء</h3>
+        <Button onClick={handleRefresh} className="mt-4">إعادة المحاولة</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -65,17 +97,13 @@ export default function PurchasesPage() {
           <p className="text-gray-500 text-sm">إدارة أوامر الشراء والموردين</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2">
             <Printer className="w-4 h-4" />
             طباعة
           </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
             <RefreshCw className="w-4 h-4" />
             تحديث
-          </Button>
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            أمر شراء جديد
           </Button>
         </div>
       </div>
@@ -118,29 +146,72 @@ export default function PurchasesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                purchases.map((purchase) => (
-                  <TableRow key={purchase.id} className="border-b">
+                purchases.map((purchase: any, index: number) => (
+                  <motion.tr
+                    key={purchase.id || index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="border-b"
+                  >
                     <TableCell className="font-medium">{purchase.order_number}</TableCell>
-                    <TableCell>{purchase.supplier}</TableCell>
-                    <TableCell>{purchase.date}</TableCell>
-                    <TableCell className="font-bold">{purchase.total} ج.م</TableCell>
+                    <TableCell>{purchase.supplier_name}</TableCell>
+                    <TableCell>{new Date(purchase.order_date).toLocaleDateString('ar-EG')}</TableCell>
+                    <TableCell className="font-bold">{parseFloat(purchase.total).toFixed(2)} ج.م</TableCell>
                     <TableCell>
                       <Badge className={statusColors[purchase.status] || 'bg-gray-500'}>
                         {statusLabels[purchase.status] || purchase.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" className="text-blue-500" title="عرض التفاصيل">
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="text-blue-500" title="عرض التفاصيل">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-red-500"
+                          onClick={() => {
+                            setPurchaseToDelete(purchase);
+                            setDeleteDialogOpen(true);
+                          }}
+                          title="حذف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
-                  </TableRow>
+                  </motion.tr>
                 ))
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>هل أنت متأكد من حذف أمر الشراء؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              {purchaseToDelete && (
+                <>
+                  <p><strong>الأمر:</strong> {purchaseToDelete.order_number}</p>
+                  <p><strong>المورد:</strong> {purchaseToDelete.supplier_name}</p>
+                  <p className="mt-2 text-red-500">⚠️ هذا الإجراء لا يمكن التراجع عنه</p>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              نعم، احذف الأمر
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+// frontend/hooks/useProducts.ts
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsApi } from '@/lib/api/endpoints/products';
 import { Product, Category, Brand, Unit } from '@/types';
@@ -13,7 +15,6 @@ export const useProducts = (params?: any) => {
     queryFn: async () => {
       const response = await productsApi.getAll(params);
       console.log('📊 Products API response:', response.data);
-      // التعامل مع paginated response
       const data = response.data;
       if (Array.isArray(data)) {
         return data;
@@ -37,6 +38,7 @@ export const useProduct = (id: string) => {
     queryKey: ['product', id],
     queryFn: async () => {
       const response = await productsApi.getById(id);
+      console.log('📊 Product detail loaded:', response.data);
       return response.data;
     },
     enabled: !!id,
@@ -112,7 +114,7 @@ export const useDeleteProduct = () => {
 };
 
 // ============================================
-// Categories Hooks - معالجة paginated response
+// Categories Hooks
 // ============================================
 
 export const useCategories = () => {
@@ -122,7 +124,6 @@ export const useCategories = () => {
       const response = await productsApi.getCategories();
       console.log('📊 Categories API response:', response.data);
       const data = response.data;
-      // التعامل مع paginated response
       if (Array.isArray(data)) {
         return data;
       }
@@ -153,7 +154,7 @@ export const useCreateCategory = () => {
 };
 
 // ============================================
-// Brands Hooks - معالجة paginated response
+// Brands Hooks
 // ============================================
 
 export const useBrands = () => {
@@ -193,7 +194,7 @@ export const useCreateBrand = () => {
 };
 
 // ============================================
-// Units Hooks - معالجة paginated response
+// Units Hooks
 // ============================================
 
 export const useUnits = () => {

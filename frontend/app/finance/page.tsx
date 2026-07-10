@@ -1,6 +1,8 @@
+// frontend/app/finance/page.tsx
 'use client';
 
 import { useState } from 'react';
+import { useAccounts, useExpenses, useIncomes, useDailyClosing } from '@/hooks/useFinance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,32 +21,49 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Eye, Loader2, RefreshCw, Printer, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import { Search, Eye, Loader2, RefreshCw, Printer, DollarSign, TrendingUp, TrendingDown, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function FinancePage() {
   const [search, setSearch] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { data: accountsData, isLoading, error, refetch } = useAccounts({ search });
+  const { data: expensesData } = useExpenses();
+  const { data: incomesData } = useIncomes();
 
-  const accounts = [
-    { id: 1, code: '1000', name: 'النقدية', type: 'asset', balance: 50000 },
-    { id: 2, code: '1010', name: 'الصندوق', type: 'asset', balance: 15000 },
-    { id: 3, code: '2000', name: 'الموردين', type: 'liability', balance: 20000 },
-  ];
+  const accounts = Array.isArray(accountsData) ? accountsData : 
+                    accountsData?.results ? accountsData.results : [];
 
-  const totalIncome = 100000;
-  const totalExpenses = 40600;
-  const netProfit = totalIncome - totalExpenses;
+  const totalExpenses = Array.isArray(expensesData) 
+    ? expensesData.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0) 
+    : 0;
+    
+  const totalIncomes = Array.isArray(incomesData) 
+    ? incomesData.reduce((sum, i) => sum + parseFloat(i.amount || 0), 0) 
+    : 0;
 
-  const handleRefresh = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.info('تم تحديث البيانات');
-    }, 1000);
+  const netProfit = totalIncomes - totalExpenses;
+
+  const handleRefresh = async () => {
+    await refetch();
+    toast.info('تم تحديث البيانات');
   };
 
-  const handlePrint = () => window.print();
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <h3 className="text-lg font-semibold text-red-600">حدث خطأ في تحميل الحسابات</h3>
+        <Button onClick={handleRefresh} className="mt-4">إعادة المحاولة</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -54,7 +73,7 @@ export default function FinancePage() {
           <p className="text-gray-500 text-sm">إدارة الحسابات المالية</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2">
             <Printer className="w-4 h-4" />
             طباعة
           </Button>
@@ -72,7 +91,7 @@ export default function FinancePage() {
               <TrendingUp className="w-5 h-5 text-green-500" />
               <span className="text-sm text-gray-500">إجمالي الإيرادات</span>
             </div>
-            <p className="text-2xl font-bold text-green-600 mt-2">{totalIncome.toLocaleString()} ج.م</p>
+            <p className="text-2xl font-bold text-green-600 mt-2">{totalIncomes.toFixed(2)} ج.م</p>
           </CardContent>
         </Card>
         <Card className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
@@ -81,7 +100,7 @@ export default function FinancePage() {
               <TrendingDown className="w-5 h-5 text-red-500" />
               <span className="text-sm text-gray-500">إجمالي المصروفات</span>
             </div>
-            <p className="text-2xl font-bold text-red-600 mt-2">{totalExpenses.toLocaleString()} ج.م</p>
+            <p className="text-2xl font-bold text-red-600 mt-2">{totalExpenses.toFixed(2)} ج.م</p>
           </CardContent>
         </Card>
         <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
@@ -90,7 +109,7 @@ export default function FinancePage() {
               <DollarSign className="w-5 h-5 text-blue-500" />
               <span className="text-sm text-gray-500">صافي الربح</span>
             </div>
-            <p className="text-2xl font-bold text-blue-600 mt-2">{netProfit.toLocaleString()} ج.م</p>
+            <p className="text-2xl font-bold text-blue-600 mt-2">{netProfit.toFixed(2)} ج.م</p>
           </CardContent>
         </Card>
       </div>
@@ -132,17 +151,17 @@ export default function FinancePage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                accounts.map((account) => (
+                accounts.map((account: any) => (
                   <TableRow key={account.id} className="border-b">
                     <TableCell className="font-medium">{account.code}</TableCell>
                     <TableCell>{account.name}</TableCell>
                     <TableCell>
-                      <Badge variant={account.type === 'asset' ? 'default' : 'secondary'}>
-                        {account.type === 'asset' ? 'أصل' : 'خصم'}
+                      <Badge variant={account.account_type === 'asset' ? 'default' : 'secondary'}>
+                        {account.account_type_display}
                       </Badge>
                     </TableCell>
-                    <TableCell className={account.balance >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      {account.balance.toLocaleString()} ج.م
+                    <TableCell className={parseFloat(account.balance) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {parseFloat(account.balance).toFixed(2)} ج.م
                     </TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" className="text-blue-500" title="عرض التفاصيل">
