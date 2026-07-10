@@ -1,3 +1,4 @@
+// frontend/components/dashboard/StatsCard.tsx
 'use client';
 
 import { motion } from 'framer-motion';
@@ -32,11 +33,11 @@ export function StatsCard({
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <div className="bg-card rounded-2xl shadow-sm border border-border p-6">
         <div className="animate-pulse space-y-3">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+          <div className="h-4 bg-muted rounded w-1/2" />
+          <div className="h-8 bg-muted rounded w-3/4" />
+          <div className="h-4 bg-muted rounded w-1/3" />
         </div>
       </div>
     );
@@ -55,14 +56,14 @@ export function StatsCard({
   return (
     <motion.div
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-gray-700 p-6"
+      className="bg-card rounded-2xl shadow-sm hover:shadow-md transition-all border border-border p-6"
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+          <p className="text-sm font-medium text-muted-foreground truncate">
             {title}
           </p>
-          <p className="text-2xl font-bold text-gray-800 dark:text-white mt-1 truncate">
+          <p className="text-2xl font-bold text-foreground mt-1 truncate">
             {displayValue}
           </p>
           {change !== undefined && (
@@ -76,12 +77,12 @@ export function StatsCard({
                 className={`text-xs font-medium ${
                   isPositive ? 'text-emerald-600 dark:text-emerald-400' : ''
                 } ${isNegative ? 'text-red-600 dark:text-red-400' : ''} ${
-                  change === 0 ? 'text-gray-500 dark:text-gray-400' : ''
+                  change === 0 ? 'text-muted-foreground' : ''
                 }`}
               >
                 {isPositive ? '+' : ''}{change}%
               </span>
-              <span className="text-xs text-gray-400 dark:text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {changeLabel || 'من الشهر الماضي'}
               </span>
             </div>

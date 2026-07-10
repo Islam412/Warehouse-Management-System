@@ -1,4 +1,8 @@
+/* frontend/app/globals.css */
+
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-background: #ffffff;
@@ -21,6 +25,8 @@
   --color-input: #e5e7eb;
   --color-ring: #1a56db;
   --radius: 0.5rem;
+
+  /* Dark mode colors - will be applied via .dark class */
 }
 
 .dark {
@@ -56,7 +62,9 @@
   }
 }
 
-/* تحسين التمرير */
+/* ============================================
+   Dark Mode Scrollbar
+   ============================================ */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -72,7 +80,16 @@
   background: #9ca3af;
 }
 
-/* تحسين التحديد */
+.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+/* ============================================
+   Selection Color
+   ============================================ */
 ::selection {
   background: rgba(59, 130, 246, 0.3);
   color: #1e3a5f;
@@ -81,4 +98,172 @@
 .dark ::selection {
   background: rgba(59, 130, 246, 0.3);
   color: #ffffff;
+}
+
+/* ============================================
+   Smooth Transitions for Theme Switching
+   ============================================ */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: ease;
+  transition-duration: 200ms;
+}
+
+/* ============================================
+   Card Hover Effects
+   ============================================ */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+}
+
+.dark .card-hover:hover {
+  box-shadow: 0 10px 30px -10px rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   Stats Card Colors
+   ============================================ */
+.stats-blue {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+.stats-green {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+.stats-purple {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+.stats-rose {
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+}
+.stats-amber {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+.stats-teal {
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+}
+.stats-indigo {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+}
+
+/* ============================================
+   Status Badges
+   ============================================ */
+.badge-active {
+  background-color: #10b981;
+  color: white;
+}
+.badge-inactive {
+  background-color: #ef4444;
+  color: white;
+}
+.badge-pending {
+  background-color: #f59e0b;
+  color: white;
+}
+.badge-low-stock {
+  background-color: #f59e0b;
+  color: white;
+}
+.badge-out-of-stock {
+  background-color: #ef4444;
+  color: white;
+}
+
+.dark .badge-active {
+  background-color: #059669;
+}
+.dark .badge-inactive {
+  background-color: #dc2626;
+}
+.dark .badge-pending {
+  background-color: #d97706;
+}
+.dark .badge-low-stock {
+  background-color: #d97706;
+}
+.dark .badge-out-of-stock {
+  background-color: #dc2626;
+}
+
+/* ============================================
+   Tables
+   ============================================ */
+.table-row-hover:hover {
+  background-color: rgba(243, 244, 246, 0.5);
+}
+
+.dark .table-row-hover:hover {
+  background-color: rgba(31, 41, 55, 0.5);
+}
+
+/* ============================================
+   Input Fields
+   ============================================ */
+.input-focus:focus {
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dark .input-focus:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* ============================================
+   Loading Spinner
+   ============================================ */
+.spinner {
+  border: 3px solid rgba(59, 130, 246, 0.1);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.dark .spinner {
+  border: 3px solid rgba(59, 130, 246, 0.2);
+  border-top-color: #60a5fa;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   Charts Dark Mode Override
+   ============================================ */
+.dark .recharts-cartesian-grid-horizontal line,
+.dark .recharts-cartesian-grid-vertical line {
+  stroke: #374151;
+}
+
+.dark .recharts-text {
+  fill: #9ca3af;
+}
+
+.dark .recharts-tooltip-wrapper {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .dark body {
+    background: white !important;
+    color: black !important;
+  }
 }

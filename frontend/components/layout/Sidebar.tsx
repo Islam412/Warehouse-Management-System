@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import {
   LayoutDashboard,
   Package,
@@ -20,10 +21,20 @@ import {
   LogOut,
   Menu,
   X,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUnreadCount } from '@/hooks/useNotifications';
 import { logout, getAccessToken } from '@/lib/auth';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 const menuItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'لوحة التحكم' },
@@ -41,14 +52,17 @@ const menuItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { data: unreadCount } = useUnreadCount();
 
   // التحقق من المصادقة
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   useEffect(() => {
+    setMounted(true);
     setIsAuthenticated(!!getAccessToken());
   }, []);
 
@@ -74,7 +88,7 @@ export function Sidebar() {
       {/* زر القائمة للشاشات الصغيرة */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="fixed top-4 right-4 z-50 md:hidden p-2 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700"
+        className="fixed top-4 right-4 z-50 md:hidden p-2 rounded-lg bg-card shadow-lg border border-border"
       >
         {isMobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
@@ -82,7 +96,7 @@ export function Sidebar() {
       {/* الـ Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 right-0 h-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 transition-all duration-300 z-40",
+          "fixed top-0 right-0 h-full bg-card border-l border-border transition-all duration-300 z-40",
           "md:translate-x-0",
           isCollapsed ? "w-20" : "w-64",
           isMobileOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
@@ -90,29 +104,29 @@ export function Sidebar() {
       >
         {/* شعار */}
         <div className={cn(
-          "flex items-center h-16 px-4 border-b border-gray-200 dark:border-gray-800",
+          "flex items-center h-16 px-4 border-b border-border",
           isCollapsed ? "justify-center" : "justify-between"
         )}>
           {!isCollapsed && (
-            <Link href="/dashboard" className="text-xl font-bold text-blue-600 dark:text-blue-400">
+            <Link href="/dashboard" className="text-xl font-bold text-primary">
               DUKA
             </Link>
           )}
           {isCollapsed && (
-            <Link href="/dashboard" className="text-xl font-bold text-blue-600 dark:text-blue-400">
+            <Link href="/dashboard" className="text-xl font-bold text-primary">
               D
             </Link>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden md:block p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="hidden md:block p-1 rounded-lg hover:bg-muted transition-colors"
           >
             {isCollapsed ? <Menu className="w-5 h-5" /> : <X className="w-5 h-5" />}
           </button>
         </div>
 
         {/* القائمة */}
-        <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100vh-8rem)]">
+        <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100vh-12rem)]">
           {menuItems.map((item) => {
             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
             const Icon = item.icon;
@@ -123,16 +137,19 @@ export function Sidebar() {
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
-                  "hover:bg-gray-100 dark:hover:bg-gray-800",
-                  isActive && "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+                  "hover:bg-muted",
+                  isActive && "bg-primary/10 text-primary",
                   isCollapsed ? "justify-center" : "justify-start"
                 )}
                 onClick={() => setIsMobileOpen(false)}
               >
                 <div className="relative">
-                  <Icon className={cn("w-5 h-5 flex-shrink-0", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400")} />
+                  <Icon className={cn(
+                    "w-5 h-5 flex-shrink-0",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )} />
                   {item.href === '/notifications' && unreadCount && unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -140,7 +157,7 @@ export function Sidebar() {
                 {!isCollapsed && (
                   <span className={cn(
                     "text-sm font-medium",
-                    isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-700 dark:text-gray-300"
+                    isActive ? "text-primary" : "text-foreground"
                   )}>
                     {item.label}
                   </span>
@@ -150,36 +167,90 @@ export function Sidebar() {
           })}
 
           {/* الفاصل */}
-          <div className="my-4 border-t border-gray-200 dark:border-gray-800" />
+          <div className="my-4 border-t border-border" />
 
           {/* الملف الشخصي */}
           <Link
             href="/profile"
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
-              "hover:bg-gray-100 dark:hover:bg-gray-800",
-              pathname === '/profile' && "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+              "hover:bg-muted",
+              pathname === '/profile' && "bg-primary/10 text-primary",
               isCollapsed ? "justify-center" : "justify-start"
             )}
             onClick={() => setIsMobileOpen(false)}
           >
-            <User className={cn("w-5 h-5 flex-shrink-0", pathname === '/profile' ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400")} />
+            <User className={cn(
+              "w-5 h-5 flex-shrink-0",
+              pathname === '/profile' ? "text-primary" : "text-muted-foreground"
+            )} />
             {!isCollapsed && (
               <span className={cn(
                 "text-sm font-medium",
-                pathname === '/profile' ? "text-blue-600 dark:text-blue-400" : "text-gray-700 dark:text-gray-300"
+                pathname === '/profile' ? "text-primary" : "text-foreground"
               )}>
                 الملف الشخصي
               </span>
             )}
           </Link>
 
+          {/* ============================================
+              🌗 زر تبديل الوضع (Dark/Light)
+              ============================================ */}
+          <div className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
+            isCollapsed ? "justify-center" : "justify-start"
+          )}>
+            {mounted && (
+              <>
+                <button
+                  onClick={() => setTheme('light')}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-all",
+                    theme === 'light' ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
+                  )}
+                  title="وضع فاتح"
+                >
+                  <Sun className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setTheme('dark')}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-all",
+                    theme === 'dark' ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
+                  )}
+                  title="وضع داكن"
+                >
+                  <Moon className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setTheme('system')}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-all",
+                    theme === 'system' ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
+                  )}
+                  title="تلقائي"
+                >
+                  <Monitor className="w-4 h-4" />
+                </button>
+                {!isCollapsed && (
+                  <span className="text-xs text-muted-foreground mr-1">
+                    {theme === 'light' ? 'فاتح' : theme === 'dark' ? 'داكن' : 'تلقائي'}
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* الفاصل */}
+          <div className="my-2 border-t border-border" />
+
           {/* تسجيل الخروج */}
           <button
             onClick={handleLogout}
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full",
-              "hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500",
+              "hover:bg-destructive/10 text-destructive",
               isCollapsed ? "justify-center" : "justify-start"
             )}
           >
