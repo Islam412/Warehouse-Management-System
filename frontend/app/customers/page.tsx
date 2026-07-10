@@ -1,16 +1,8 @@
 // frontend/app/customers/page.tsx
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { 
-  useCustomers, 
-  useDeleteCustomer,
-  useCustomerStats,
-  useCustomerDistribution,
-  useInactiveCustomers,
-  useLoyalCustomers,
-  useCustomerComparison
-} from '@/hooks/useCustomers';
+import { useState, useMemo } from 'react';
+import { useCustomers, useDeleteCustomer } from '@/hooks/useCustomers';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,7 +57,6 @@ import {
   CreditCard,
   TrendingUp,
   TrendingDown,
-  Award,
   Crown,
   AlertCircle,
   CheckCircle,
@@ -80,11 +71,6 @@ import {
   Brain,
   Layers,
   Flame,
-  Shield,
-  UserCheck,
-  UserX,
-  Zap,
-  Sparkles
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -121,70 +107,20 @@ export default function CustomersPage() {
   const [editKey, setEditKey] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
 
-  // ============================================
-  // 📊 جلب البيانات من الـ API
-  // ============================================
-  
   const { data: customersData, isLoading, error, refetch } = useCustomers({ search });
-  const { data: statsData, isLoading: statsLoading } = useCustomerStats();
-  const { data: distributionData, isLoading: distLoading } = useCustomerDistribution();
-  const { data: inactiveData, isLoading: inactiveLoading } = useInactiveCustomers();
-  const { data: loyalData, isLoading: loyalLoading } = useLoyalCustomers();
-  const { data: comparisonData, isLoading: comparisonLoading } = useCustomerComparison();
   const deleteCustomer = useDeleteCustomer();
 
   const customers = Array.isArray(customersData) ? customersData : 
                      customersData?.results ? customersData.results : [];
 
   // ============================================
-  // 📊 استخدام البيانات الحقيقية من الـ API
-  // ============================================
-
-  // إحصائيات العملاء
-  const stats = statsData || {
-    total: 0,
-    vip: 0,
-    regular: 0,
-    blocked: 0,
-    with_debt: 0,
-    with_credit: 0,
-    total_debt: 0,
-    avg_spending: 0,
-    avg_balance: 0,
-  };
-
-  // توزيع العملاء حسب المدينة
-  const cityDistribution = distributionData?.city_distribution || [];
-  
-  // العملاء الجدد حسب الشهر
-  const registrationData = distributionData?.registration_trend || [];
-
-  // العملاء غير النشطين
-  const inactiveCustomers = inactiveData || [];
-
-  // العملاء الأكثر ولاءً
-  const loyalCustomers = loyalData || [];
-
-  // مقارنة VIP vs عاديين
-  const comparison = comparisonData || {
-    vip_count: 0,
-    regular_count: 0,
-    avg_vip_purchase: 0,
-    avg_regular_purchase: 0,
-    avg_vip_balance: 0,
-    avg_regular_balance: 0,
-    vip_total_purchases: 0,
-    regular_total_purchases: 0,
-  };
-
-  // ============================================
-  // 📊 تحليلات محلية إضافية
+  // 📊 تحليلات العملاء (محسوبة محلياً)
   // ============================================
 
   // العملاء المميزين (VIP)
   const vipCustomers = customers.filter(c => c.is_vip && c.is_active);
   
-  // العملاء العاديين (غير VIP ونشطين)
+  // العملاء العاديين
   const regularCustomers = customers.filter(c => !c.is_vip && c.is_active);
   
   // العملاء المحظورين
@@ -196,7 +132,7 @@ export default function CustomersPage() {
   // العملاء الذين لديهم رصيد إيجابي
   const customersWithCredit = customers.filter(c => parseFloat(c.balance || 0) > 0);
 
-  // العملاء الأكثر تفاعل (من البيانات المحلية)
+  // العملاء الأكثر تفاعل
   const topInteractive = useMemo(() => {
     return [...customers]
       .filter(c => c.is_active)
@@ -204,26 +140,63 @@ export default function CustomersPage() {
       .slice(0, 10);
   }, [customers]);
 
-  // ============================================
-  // 📊 بيانات الرسوم البيانية
-  // ============================================
+  // العملاء الأقل تفاعل
+  const leastInteractive = useMemo(() => {
+    return [...customers]
+      .filter(c => c.is_active)
+      .sort((a, b) => parseFloat(a.total_purchases || 0) - parseFloat(b.total_purchases || 0))
+      .slice(0, 10);
+  }, [customers]);
 
-  // توزيع العملاء (VIP / عاديين / محظورين)
+  // العملاء غير النشطين (لم يشتروا منذ فترة)
+  const inactiveCustomers = useMemo(() => {
+    return customers
+      .filter(c => c.is_active)
+      .filter(c => {
+        if (!c.updated_at) return false;
+        const lastUpdate = new Date(c.updated_at);
+        const daysDiff = (new Date().getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
+        return daysDiff > 30;
+      })
+      .slice(0, 10);
+  }, [customers]);
+
+  // العملاء الأكثر ولاءً (أكبر عدد فواتير)
+  const loyalCustomers = useMemo(() => {
+    return [...customers]
+      .filter(c => c.is_active)
+      .sort((a, b) => (b.total_invoices || 0) - (a.total_invoices || 0))
+      .slice(0, 10);
+  }, [customers]);
+
+  // ============================================
+  // 📊 إحصائيات
+  // ============================================
+  
+  const totalCustomers = customers.length;
+  const totalVIP = vipCustomers.length;
+  const totalRegular = regularCustomers.length;
+  const totalBlocked = blockedCustomers.length;
+  const totalWithDebt = customersWithDebt.length;
+  const totalWithCredit = customersWithCredit.length;
+  const totalDebt = customersWithDebt.reduce((sum, c) => sum + parseFloat(c.balance || 0), 0);
+  const avgSpending = customers.length > 0 
+    ? customers.reduce((sum, c) => sum + parseFloat(c.total_purchases || 0), 0) / customers.length 
+    : 0;
+
+  // بيانات الرسم البياني
   const pieData = [
-    { name: 'مميزين (VIP)', value: vipCustomers.length || 0 },
-    { name: 'عاديين', value: regularCustomers.length || 0 },
-    { name: 'محظورين', value: blockedCustomers.length || 0 },
+    { name: 'مميزين (VIP)', value: totalVIP },
+    { name: 'عاديين', value: totalRegular },
+    { name: 'محظورين', value: totalBlocked },
   ];
 
-  // بيانات الأقساط
-  const debtData = customersWithDebt
-    .slice(0, 10)
-    .map(c => ({
-      name: c.name.length > 10 ? c.name.substring(0, 10) + '...' : c.name,
-      debt: Math.abs(parseFloat(c.balance || 0)),
-    }));
+  const debtData = customersWithDebt.slice(0, 10).map(c => ({
+    name: c.name.length > 10 ? c.name.substring(0, 10) + '...' : c.name,
+    debt: Math.abs(parseFloat(c.balance || 0)),
+  }));
 
-  // بيانات الرادار للمقارنة (VIP vs عاديين فقط)
+  // بيانات مقارنة VIP
   const vipComparison = useMemo(() => {
     const vip = customers.filter(c => c.is_vip && c.is_active);
     const regular = customers.filter(c => !c.is_vip && c.is_active);
@@ -255,26 +228,10 @@ export default function CustomersPage() {
   }, [customers]);
 
   const radarData = [
-    { 
-      subject: 'متوسط المشتريات', 
-      VIP: vipComparison.avgVipPurchase || 0, 
-      Regular: vipComparison.avgRegularPurchase || 0 
-    },
-    { 
-      subject: 'متوسط الرصيد', 
-      VIP: Math.abs(vipComparison.avgVipBalance || 0), 
-      Regular: Math.abs(vipComparison.avgRegularBalance || 0) 
-    },
-    { 
-      subject: 'عدد العملاء', 
-      VIP: vipComparison.vipCount || 0, 
-      Regular: vipComparison.regularCount || 0 
-    },
-    { 
-      subject: 'إجمالي المشتريات', 
-      VIP: vipComparison.vipTotalPurchases || 0, 
-      Regular: vipComparison.regularTotalPurchases || 0 
-    },
+    { subject: 'متوسط المشتريات', VIP: vipComparison.avgVipPurchase || 0, Regular: vipComparison.avgRegularPurchase || 0 },
+    { subject: 'متوسط الرصيد', VIP: Math.abs(vipComparison.avgVipBalance || 0), Regular: Math.abs(vipComparison.avgRegularBalance || 0) },
+    { subject: 'عدد العملاء', VIP: vipComparison.vipCount || 0, Regular: vipComparison.regularCount || 0 },
+    { subject: 'إجمالي المشتريات', VIP: vipComparison.vipTotalPurchases || 0, Regular: vipComparison.regularTotalPurchases || 0 },
   ];
 
   // مستوى الإنفاق
@@ -297,26 +254,51 @@ export default function CustomersPage() {
     return Object.entries(levels).map(([name, value]) => ({ name, value }));
   }, [customers]);
 
-  // ============================================
-  // 📊 إحصائيات محسوبة
-  // ============================================
-  
-  const totalCustomers = customers.length;
-  const totalVIP = vipCustomers.length;
-  const totalRegular = regularCustomers.length;
-  const totalBlocked = blockedCustomers.length;
-  const totalWithDebt = customersWithDebt.length;
-  const totalWithCredit = customersWithCredit.length;
-  const totalDebt = customersWithDebt.reduce((sum, c) => sum + parseFloat(c.balance || 0), 0);
-  const avgSpending = customers.length > 0 
-    ? customers.reduce((sum, c) => sum + parseFloat(c.total_purchases || 0), 0) / customers.length 
-    : 0;
-  const avgBalance = customers.length > 0 
-    ? customers.reduce((sum, c) => sum + parseFloat(c.balance || 0), 0) / customers.length 
-    : 0;
+  // توزيع حسب المدينة
+  const cityDistribution = useMemo(() => {
+    const cities: Record<string, number> = {};
+    customers.forEach(c => {
+      if (c.address) {
+        const city = c.address.split(',')[0]?.trim() || 'غير محدد';
+        cities[city] = (cities[city] || 0) + 1;
+      } else {
+        cities['غير محدد'] = (cities['غير محدد'] || 0) + 1;
+      }
+    });
+    return Object.entries(cities)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  }, [customers]);
+
+  // التسجيل حسب الشهر
+  const registrationData = useMemo(() => {
+    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    const data: Record<string, number> = {};
+    
+    // آخر 6 أشهر
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${months[date.getMonth()]} ${date.getFullYear()}`;
+      data[key] = 0;
+    }
+    
+    customers.forEach(c => {
+      if (c.created_at) {
+        const date = new Date(c.created_at);
+        const key = `${months[date.getMonth()]} ${date.getFullYear()}`;
+        if (data[key] !== undefined) {
+          data[key]++;
+        }
+      }
+    });
+    
+    return Object.entries(data).map(([name, value]) => ({ name, value }));
+  }, [customers]);
 
   // ============================================
-  // 📋 دوال المعالجة
+  // دوال المعالجة
   // ============================================
 
   const handleDelete = async () => {
@@ -343,11 +325,7 @@ export default function CustomersPage() {
     toast.info('تم تحديث البيانات');
   };
 
-  // ============================================
-  // 🖥️ حالة التحميل
-  // ============================================
-
-  if (isLoading || statsLoading || distLoading || inactiveLoading || loyalLoading || comparisonLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -364,10 +342,6 @@ export default function CustomersPage() {
       </div>
     );
   }
-
-  // ============================================
-  // 🎨 واجهة المستخدم
-  // ============================================
 
   return (
     <div className="space-y-6">
@@ -480,20 +454,12 @@ export default function CustomersPage() {
         </Card>
       </div>
 
-      {/* 📊 التبويبات للتحليلات المتقدمة */}
+      {/* 📊 التبويبات */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="flex flex-wrap gap-1">
           <TabsTrigger value="overview" className="gap-2">
             <BarChart3 className="w-4 h-4" />
             نظرة عامة
-          </TabsTrigger>
-          <TabsTrigger value="distribution" className="gap-2">
-            <PieChartIcon className="w-4 h-4" />
-            توزيع العملاء
-          </TabsTrigger>
-          <TabsTrigger value="comparison" className="gap-2">
-            <Layers className="w-4 h-4" />
-            مقارنة VIP
           </TabsTrigger>
           <TabsTrigger value="top" className="gap-2">
             <Flame className="w-4 h-4" />
@@ -507,14 +473,19 @@ export default function CustomersPage() {
             <Star className="w-4 h-4" />
             الأكثر ولاءً
           </TabsTrigger>
+          <TabsTrigger value="comparison" className="gap-2">
+            <Layers className="w-4 h-4" />
+            مقارنة VIP
+          </TabsTrigger>
+          <TabsTrigger value="distribution" className="gap-2">
+            <MapPin className="w-4 h-4" />
+            التوزيع
+          </TabsTrigger>
         </TabsList>
 
-        {/* ============================================
-            التبويب 1: نظرة عامة
-            ============================================ */}
+        {/* التبويب 1: نظرة عامة */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* توزيع العملاء */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-purple-600">
@@ -546,24 +517,9 @@ export default function CustomersPage() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-                  <div className="p-2 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
-                    <p className="text-xs text-amber-600">VIP</p>
-                    <p className="text-lg font-bold text-amber-700">{totalVIP}</p>
-                  </div>
-                  <div className="p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                    <p className="text-xs text-blue-600">عاديين</p>
-                    <p className="text-lg font-bold text-blue-700">{totalRegular}</p>
-                  </div>
-                  <div className="p-2 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                    <p className="text-xs text-red-600">محظورين</p>
-                    <p className="text-lg font-bold text-red-700">{totalBlocked}</p>
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
-            {/* العملاء الأكثر ديوناً */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-red-600">
@@ -594,7 +550,6 @@ export default function CustomersPage() {
             </Card>
           </div>
 
-          {/* مستوى الإنفاق */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-blue-600">
@@ -623,85 +578,139 @@ export default function CustomersPage() {
           </Card>
         </TabsContent>
 
-        {/* ============================================
-            التبويب 2: توزيع العملاء
-            ============================================ */}
-        <TabsContent value="distribution" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* توزيع حسب المدينة */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-emerald-600">
-                  <MapPin className="w-5 h-5" />
-                  توزيع العملاء حسب المدينة
-                </CardTitle>
-                <CardDescription>أكثر المدن التي يتواجد فيها العملاء</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  {cityDistribution.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-gray-500">
-                      <p>لا توجد بيانات</p>
+        {/* التبويب 2: الأكثر تفاعل */}
+        <TabsContent value="top" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-600">
+                <Flame className="w-5 h-5" />
+                العملاء الأكثر تفاعل
+              </CardTitle>
+              <CardDescription>العملاء الأكثر نشاطاً في المشتريات</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {topInteractive.length === 0 ? (
+                  <p className="text-center text-gray-500 py-4">لا توجد بيانات</p>
+                ) : (
+                  topInteractive.slice(0, 10).map((customer, index) => (
+                    <div key={customer.id} className="flex items-center justify-between p-3 hover:bg-muted rounded-lg transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                          index === 0 ? 'bg-yellow-500' : 
+                          index === 1 ? 'bg-gray-400' : 
+                          index === 2 ? 'bg-amber-600' : 'bg-blue-500'
+                        }`}>
+                          {index + 1}
+                        </span>
+                        <div>
+                          <p className="text-sm font-medium">{customer.name}</p>
+                          <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-green-600">
+                          {parseFloat(customer.total_purchases || 0).toFixed(2)} ج.م
+                        </p>
+                        <p className="text-xs text-muted-foreground">{customer.total_invoices || 0} فاتورة</p>
+                      </div>
                     </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={cityDistribution} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" fontSize={11} tickLine={false} />
-                        <YAxis dataKey="name" type="category" fontSize={11} tickLine={false} width={80} />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* التسجيل حسب الشهر */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-blue-600">
-                  <Calendar className="w-5 h-5" />
-                  العملاء الجدد حسب الشهر
-                </CardTitle>
-                <CardDescription>عدد العملاء المسجلين في آخر 6 أشهر</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  {registrationData.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-gray-500">
-                      <p>لا توجد بيانات</p>
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={registrationData}>
-                        <defs>
-                          <linearGradient id="registrationGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" fontSize={10} tickLine={false} />
-                        <YAxis fontSize={10} tickLine={false} />
-                        <Tooltip />
-                        <Area type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} fill="url(#registrationGradient)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* ============================================
-            التبويب 3: مقارنة VIP vs عاديين
-            ============================================ */}
+        {/* التبويب 3: غير نشطين */}
+        <TabsContent value="inactive" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <UserMinus className="w-5 h-5" />
+                العملاء غير النشطين
+              </CardTitle>
+              <CardDescription>عملاء لم يقوموا بأي عملية شراء منذ فترة طويلة</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {inactiveCustomers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-500" />
+                  <p>جميع العملاء نشطون!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {inactiveCustomers.map((customer, index) => {
+                    const daysInactive = customer.updated_at 
+                      ? Math.floor((new Date().getTime() - new Date(customer.updated_at).getTime()) / (1000 * 60 * 60 * 24))
+                      : 0;
+                    return (
+                      <div key={customer.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium">{index + 1}</span>
+                          <div>
+                            <p className="text-sm font-medium">{customer.name}</p>
+                            <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-red-600">{daysInactive} يوم</p>
+                          <p className="text-xs text-muted-foreground">بدون نشاط</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* التبويب 4: الأكثر ولاءً */}
+        <TabsContent value="loyal" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-600">
+                <Star className="w-5 h-5" />
+                العملاء الأكثر ولاءً
+              </CardTitle>
+              <CardDescription>العملاء الذين لديهم أكبر عدد من الفواتير</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {loyalCustomers.length === 0 ? (
+                  <p className="text-center text-gray-500 py-4">لا توجد بيانات</p>
+                ) : (
+                  loyalCustomers.slice(0, 10).map((customer, index) => (
+                    <div key={customer.id} className="flex items-center justify-between p-3 hover:bg-muted rounded-lg transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                          index === 0 ? 'bg-yellow-500' : 
+                          index === 1 ? 'bg-gray-400' : 
+                          index === 2 ? 'bg-amber-600' : 'bg-blue-500'
+                        }`}>
+                          {index + 1}
+                        </span>
+                        <div>
+                          <p className="text-sm font-medium">{customer.name}</p>
+                          <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-amber-600">{customer.total_invoices || 0} فاتورة</p>
+                        <p className="text-xs text-muted-foreground">{parseFloat(customer.total_purchases || 0).toFixed(2)} ج.م</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* التبويب 5: مقارنة VIP */}
         <TabsContent value="comparison" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* بطاقات مقارنة VIP vs عاديين */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-amber-600">
@@ -732,7 +741,6 @@ export default function CustomersPage() {
                       <p className="text-xs text-gray-500">متوسط الرصيد: {vipComparison.avgRegularBalance.toFixed(2)} ج.م</p>
                     </div>
                   </div>
-
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
                       <p className="text-xs text-green-600">إجمالي مشتريات VIP</p>
@@ -743,8 +751,6 @@ export default function CustomersPage() {
                       <p className="text-lg font-bold text-purple-700">{vipComparison.regularTotalPurchases.toFixed(2)} ج.م</p>
                     </div>
                   </div>
-
-                  {/* نسبة VIP */}
                   <div className="p-3 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
                     <p className="text-xs text-indigo-600">نسبة VIP إلى إجمالي العملاء النشطين</p>
                     <p className="text-lg font-bold text-indigo-700">
@@ -767,7 +773,6 @@ export default function CustomersPage() {
               </CardContent>
             </Card>
 
-            {/* رسم بياني رادار */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-indigo-600">
@@ -783,20 +788,8 @@ export default function CustomersPage() {
                       <PolarGrid />
                       <PolarAngleAxis dataKey="subject" fontSize={10} />
                       <PolarRadiusAxis fontSize={10} />
-                      <Radar 
-                        name="VIP" 
-                        dataKey="VIP" 
-                        stroke="#f59e0b" 
-                        fill="#f59e0b" 
-                        fillOpacity={0.2} 
-                      />
-                      <Radar 
-                        name="Regular" 
-                        dataKey="Regular" 
-                        stroke="#3b82f6" 
-                        fill="#3b82f6" 
-                        fillOpacity={0.2} 
-                      />
+                      <Radar name="VIP" dataKey="VIP" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} />
+                      <Radar name="Regular" dataKey="Regular" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
                       <Legend />
                       <Tooltip />
                     </RadarChart>
@@ -806,7 +799,6 @@ export default function CustomersPage() {
             </Card>
           </div>
 
-          {/* جدول مقارنة تفصيلي */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-600">
@@ -874,140 +866,73 @@ export default function CustomersPage() {
           </Card>
         </TabsContent>
 
-        {/* ============================================
-            التبويب 4: الأكثر تفاعل
-            ============================================ */}
-        <TabsContent value="top" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-600">
-                <Flame className="w-5 h-5" />
-                العملاء الأكثر تفاعل
-              </CardTitle>
-              <CardDescription>العملاء الأكثر نشاطاً في المشتريات</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {topInteractive.length === 0 ? (
-                  <p className="text-center text-gray-500 py-4">لا توجد بيانات</p>
-                ) : (
-                  topInteractive.map((customer, index) => (
-                    <div key={customer.id} className="flex items-center justify-between p-3 hover:bg-muted rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                          index === 0 ? 'bg-yellow-500' : 
-                          index === 1 ? 'bg-gray-400' : 
-                          index === 2 ? 'bg-amber-600' : 'bg-blue-500'
-                        }`}>
-                          {index + 1}
-                        </span>
-                        <div>
-                          <p className="text-sm font-medium">{customer.name}</p>
-                          <p className="text-xs text-muted-foreground">{customer.phone}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-green-600">
-                          {parseFloat(customer.total_purchases || 0).toFixed(2)} ج.م
-                        </p>
-                        <p className="text-xs text-muted-foreground">{customer.total_invoices || 0} فاتورة</p>
-                      </div>
+        {/* التبويب 6: التوزيع */}
+        <TabsContent value="distribution" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-emerald-600">
+                  <MapPin className="w-5 h-5" />
+                  توزيع العملاء حسب المدينة
+                </CardTitle>
+                <CardDescription>أكثر المدن التي يتواجد فيها العملاء</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  {cityDistribution.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-gray-500">
+                      <p>لا توجد بيانات</p>
                     </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ============================================
-            التبويب 5: غير نشطين
-            ============================================ */}
-        <TabsContent value="inactive" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-600">
-                <UserMinus className="w-5 h-5" />
-                العملاء غير النشطين
-              </CardTitle>
-              <CardDescription>عملاء لم يقوموا بأي عملية شراء منذ فترة طويلة</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {inactiveCustomers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-500" />
-                  <p>جميع العملاء نشطون!</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={cityDistribution} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" fontSize={11} tickLine={false} />
+                        <YAxis dataKey="name" type="category" fontSize={11} tickLine={false} width={80} />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {inactiveCustomers.slice(0, 10).map((customer, index) => {
-                    const daysInactive = customer.updated_at 
-                      ? Math.floor((new Date().getTime() - new Date(customer.updated_at).getTime()) / (1000 * 60 * 60 * 24))
-                      : 0;
-                    return (
-                      <div key={customer.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium">{index + 1}</span>
-                          <div>
-                            <p className="text-sm font-medium">{customer.name}</p>
-                            <p className="text-xs text-muted-foreground">{customer.phone}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-red-600">{daysInactive} يوم</p>
-                          <p className="text-xs text-muted-foreground">بدون نشاط</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
 
-        {/* ============================================
-            التبويب 6: الأكثر ولاءً
-            ============================================ */}
-        <TabsContent value="loyal" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-amber-600">
-                <Star className="w-5 h-5" />
-                العملاء الأكثر ولاءً
-              </CardTitle>
-              <CardDescription>العملاء الذين لديهم أكبر عدد من الفواتير</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {loyalCustomers.length === 0 ? (
-                  <p className="text-center text-gray-500 py-4">لا توجد بيانات</p>
-                ) : (
-                  loyalCustomers.slice(0, 10).map((customer, index) => (
-                    <div key={customer.id} className="flex items-center justify-between p-3 hover:bg-muted rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                          index === 0 ? 'bg-yellow-500' : 
-                          index === 1 ? 'bg-gray-400' : 
-                          index === 2 ? 'bg-amber-600' : 'bg-blue-500'
-                        }`}>
-                          {index + 1}
-                        </span>
-                        <div>
-                          <p className="text-sm font-medium">{customer.name}</p>
-                          <p className="text-xs text-muted-foreground">{customer.phone}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-amber-600">{customer.total_invoices || 0} فاتورة</p>
-                        <p className="text-xs text-muted-foreground">{parseFloat(customer.total_purchases || 0).toFixed(2)} ج.م</p>
-                      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-blue-600">
+                  <Calendar className="w-5 h-5" />
+                  العملاء الجدد حسب الشهر
+                </CardTitle>
+                <CardDescription>عدد العملاء المسجلين في آخر 6 أشهر</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  {registrationData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-gray-500">
+                      <p>لا توجد بيانات</p>
                     </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={registrationData}>
+                        <defs>
+                          <linearGradient id="registrationGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" fontSize={10} tickLine={false} />
+                        <YAxis fontSize={10} tickLine={false} />
+                        <Tooltip />
+                        <Area type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} fill="url(#registrationGradient)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -1095,7 +1020,7 @@ export default function CustomersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Link href={`/customer/${customer.id}`}>
+                          <Link href={`/customers/${customer.id}`}>
                             <Button variant="ghost" size="icon" className="text-blue-500" title="عرض التفاصيل">
                               <Eye className="w-4 h-4" />
                             </Button>
