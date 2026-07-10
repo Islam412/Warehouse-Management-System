@@ -1374,9 +1374,15 @@ export default function InventoryPage() {
                         <Badge className={statusColor}>{status}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" className="text-blue-500" title="عرض التفاصيل">
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          {stock.product && (
+                            <Link href={`/inventory/${stock.product}`}>
+                              <Button variant="ghost" size="icon" className="text-blue-500 hover:text-blue-700" title="عرض التفاصيل">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
