@@ -7,6 +7,7 @@ from accounts.models import User
 from customers.models import Customer
 from products.models import Product
 
+
 class Invoice(models.Model):
     """فاتورة المبيعات"""
     INVOICE_STATUS = (
@@ -49,7 +50,6 @@ class Invoice(models.Model):
         return f"{self.invoice_number or 'No Number'} - {self.customer.name}"
     
     def save(self, *args, **kwargs):
-        # إنشاء رقم فاتورة إذا لم يكن موجوداً
         if not self.invoice_number:
             from django.utils import timezone
             today = timezone.now()
@@ -61,39 +61,26 @@ class Invoice(models.Model):
             ).count() + 1
             self.invoice_number = f"INV-{year}{month}-{str(count).zfill(4)}"
         
-        # حفظ الفاتورة أولاً (للتأكد من وجود ID)
         super().save(*args, **kwargs)
-        
-        # حساب الإجمالي بعد الحفظ (عندما يكون هناك ID)
         self.update_totals()
     
     def update_totals(self):
-        """تحديث الإجماليات بعد حفظ البنود"""
-        # التأكد من وجود ID قبل الوصول إلى items
         if self.pk:
             self.subtotal = sum(item.total for item in self.items.all())
             self.total = self.subtotal - self.discount + self.tax
             self.remaining_amount = self.total - self.paid_amount
             
-            # تحديث حالة الفاتورة
             if self.remaining_amount <= 0:
                 self.status = 'paid'
             elif self.paid_amount > 0:
                 self.status = 'partially_paid'
             
-            # حفظ التحديثات بدون إعادة استدعاء save() لتجنب الحلقات اللانهائية
             super().save(update_fields=['subtotal', 'total', 'remaining_amount', 'status'])
-    
-    def calculate_total(self):
-        """حساب الإجمالي - استدعاء من الخارج"""
-        self.update_totals()
     
     @property
     def is_overdue(self):
-        """هل الفاتورة متأخرة؟"""
         from django.utils import timezone
         return self.status != 'paid' and timezone.now().date() > self.due_date
-
 class InvoiceItem(models.Model):
     """بنود الفاتورة"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -181,3 +168,4 @@ class Return(models.Model):
     
     def __str__(self):
         return f"{self.invoice.invoice_number} - {self.product.name}"
+

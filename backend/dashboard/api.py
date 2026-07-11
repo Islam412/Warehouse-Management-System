@@ -388,7 +388,12 @@ class DashboardSalesChartView(APIView):
         
         for item in daily_data:
             if item['day']:
-                day_str = item['day'].strftime('%Y-%m-%d')
+                # التحقق من نوع القيمة
+                if isinstance(item['day'], str):
+                    day_str = item['day']
+                else:
+                    day_str = item['day'].strftime('%Y-%m-%d')
+                
                 if day_str in dates:
                     idx = dates.index(day_str)
                     sales_data[idx] = float(item['total'] or 0)

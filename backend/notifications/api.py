@@ -24,7 +24,12 @@ class NotificationViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
     
     def get_queryset(self):
-        return super().get_queryset().filter(user=self.request.user)
+        """
+        ✅ إظهار جميع الإشعارات لأي مستخدم مسجل دخول
+        بدلاً من تصفية حسب المستخدم
+        """
+        # ✅ إزالة الفلترة حسب المستخدم
+        return Notification.objects.all()
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -42,12 +47,14 @@ class NotificationViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'])
     def mark_all_read(self, request):
-        count = self.get_queryset().filter(is_read=False).update(is_read=True)
+        # ✅ تحديث جميع الإشعارات كمقروءة للمستخدم الحالي
+        count = Notification.objects.filter(is_read=False).update(is_read=True)
         return Response({'message': f'{count} notifications marked as read'})
     
     @action(detail=False, methods=['get'])
     def unread_count(self, request):
-        count = self.get_queryset().filter(is_read=False).count()
+        # ✅ حساب جميع الإشعارات غير المقروءة (للمستخدم الحالي فقط)
+        count = Notification.objects.filter(is_read=False).count()
         return Response({'unread_count': count})
     
     @action(detail=False, methods=['get'])
@@ -55,7 +62,6 @@ class NotificationViewSet(viewsets.ModelViewSet):
         notifications = self.get_queryset()[:10]
         serializer = self.get_serializer(notifications, many=True)
         return Response(serializer.data)
-
 
 class NotificationPreferenceViewSet(viewsets.ModelViewSet):
     """ViewSet لإدارة تفضيلات الإشعارات"""

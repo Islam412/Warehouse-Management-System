@@ -8,6 +8,7 @@ from suppliers.models import Supplier
 from products.models import Product
 from inventory.models import Warehouse
 
+
 class PurchaseOrder(models.Model):
     """أمر الشراء"""
     ORDER_STATUS = (
@@ -31,6 +32,9 @@ class PurchaseOrder(models.Model):
     tax = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="الضريبة")
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="الإجمالي")
     
+    # ✅ إضافة حقل المبلغ المدفوع لحساب المستحقات
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="المبلغ المدفوع")
+    
     status = models.CharField(max_length=20, choices=ORDER_STATUS, default='draft', verbose_name="الحالة")
     notes = models.TextField(blank=True, null=True, verbose_name="ملاحظات")
     
@@ -52,7 +56,11 @@ class PurchaseOrder(models.Model):
         self.subtotal = sum(item.total for item in self.items.all())
         self.total = self.subtotal - self.discount + self.tax
         self.save()
-
+    
+    @property
+    def remaining_amount(self):
+        """المبلغ المتبقي للدفع"""
+        return self.total - self.paid_amount
 class PurchaseItem(models.Model):
     """بنود أمر الشراء"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -68,6 +76,12 @@ class PurchaseItem(models.Model):
     
     received_quantity = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="الكمية المستلمة")
     
+    paid_amount = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0, 
+        verbose_name="المبلغ المدفوع"
+    )
     class Meta:
         db_table = 'purchase_items'
         verbose_name = "بند شراء"

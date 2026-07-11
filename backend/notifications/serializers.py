@@ -6,20 +6,21 @@ class NotificationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Notification
-        fields = ['id', 'title', 'message', 'notification_type', 'notification_type_display',
-                  'user', 'is_read', 'is_sent', 'link', 'reference_type', 'reference_id',
-                  'extra_data', 'created_at', 'read_at', 'sent_at']
+        fields = [
+            'id', 'title', 'message', 'notification_type', 'notification_type_display',
+            'user', 'is_read', 'is_sent', 'reference_type', 'reference_id',
+            'extra_data', 'due_date', 'created_at', 'read_at', 'sent_at'
+        ]
         read_only_fields = ['id', 'created_at', 'read_at', 'sent_at']
 
 class NotificationCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['title', 'message', 'notification_type', 'user', 'link',
-                  'reference_type', 'reference_id', 'extra_data']
-        read_only_fields = ['user']  # user يقرأ تلقائياً من request
+        fields = ['title', 'message', 'notification_type', 'user', 'reference_type', 
+                  'reference_id', 'extra_data', 'due_date']
+        read_only_fields = ['user']
     
     def create(self, validated_data):
-        # إذا لم يتم إرسال user، نستخدم request.user
         if 'user' not in validated_data:
             validated_data['user'] = self.context['request'].user
         return super().create(validated_data)

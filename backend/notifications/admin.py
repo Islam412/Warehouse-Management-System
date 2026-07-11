@@ -3,11 +3,16 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from .models import Notification, NotificationPreference, NotificationLog
 
+
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    """إدارة الإشعارات"""
-    list_display = ['title', 'user', 'notification_type_display', 'priority_display', 
-                   'is_read_display', 'is_sent_display', 'created_at']
+    """إدارة الإشعارات - Admin احترافي"""
+    
+    list_display = [
+        'title_short', 'notification_type_display', 'priority_display',
+        'user', 'is_read_display', 'is_sent_display', 'created_at'
+    ]
+    
     list_filter = ['notification_type', 'priority', 'is_read', 'is_sent', 'created_at']
     search_fields = ['title', 'message', 'user__username', 'user__email']
     readonly_fields = ['id', 'created_at', 'read_at', 'sent_at']
@@ -35,6 +40,10 @@ class NotificationAdmin(admin.ModelAdmin):
         }),
     )
     
+    def title_short(self, obj):
+        return obj.title[:50] + '...' if len(obj.title) > 50 else obj.title
+    title_short.short_description = _('العنوان')
+    
     def notification_type_display(self, obj):
         colors = {
             'info': '#17a2b8',
@@ -44,8 +53,11 @@ class NotificationAdmin(admin.ModelAdmin):
             'payment_due': '#dc3545',
             'collection_due': '#6f42c1',
             'shipment_due': '#17a2b8',
+            'shipment_received': '#28a745',
             'stock_alert': '#fd7e14',
             'system': '#6c757d',
+            'order_created': '#17a2b8',
+            'order_confirmed': '#28a745',
         }
         color = colors.get(obj.notification_type, '#6c757d')
         return format_html('<span style="color: {}; font-weight: bold;">{}</span>', 
@@ -95,38 +107,16 @@ class NotificationAdmin(admin.ModelAdmin):
         self.message_user(request, f'تم تحديد {updated} إشعار(إشعارات) كمرسلة.')
     mark_as_sent.short_description = _('تحديد كمرسلة')
 
+
 @admin.register(NotificationPreference)
 class NotificationPreferenceAdmin(admin.ModelAdmin):
     """إدارة تفضيلات الإشعارات"""
-    list_display = ['user', 'enable_notifications_display', 'enable_email', 'enable_push']
+    list_display = ['user', 'enable_notifications', 'enable_email', 'enable_push']
     list_filter = ['enable_notifications', 'enable_email', 'enable_push']
     search_fields = ['user__username', 'user__email']
     readonly_fields = ['id', 'created_at', 'updated_at']
     raw_id_fields = ['user']
-    
-    fieldsets = (
-        (_('المستخدم'), {
-            'fields': ('user',)
-        }),
-        (_('الإعدادات العامة'), {
-            'fields': ('enable_notifications', 'enable_email', 'enable_push')
-        }),
-        (_('أنواع الإشعارات'), {
-            'fields': ('stock_alert', 'payment_due', 'collection_due', 'order_received', 'system_updates')
-        }),
-        (_('معلومات النظام'), {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    
-    def enable_notifications_display(self, obj):
-        return format_html(
-            '<span style="color: {};">{}</span>',
-            '#28a745' if obj.enable_notifications else '#dc3545',
-            '✅ مفعل' if obj.enable_notifications else '❌ معطل'
-        )
-    enable_notifications_display.short_description = _('الإشعارات')
+
 
 @admin.register(NotificationLog)
 class NotificationLogAdmin(admin.ModelAdmin):
@@ -136,22 +126,6 @@ class NotificationLogAdmin(admin.ModelAdmin):
     search_fields = ['notification__title', 'notification__user__username']
     readonly_fields = ['id', 'created_at']
     ordering = ['-created_at']
-    
-    fieldsets = (
-        (_('الإشعار'), {
-            'fields': ('notification',)
-        }),
-        (_('قناة الإرسال'), {
-            'fields': ('channel',)
-        }),
-        (_('الحالة'), {
-            'fields': ('status', 'response', 'error')
-        }),
-        (_('معلومات النظام'), {
-            'fields': ('created_at', 'sent_at'),
-            'classes': ('collapse',)
-        }),
-    )
     
     def channel_display(self, obj):
         return obj.get_channel_display()

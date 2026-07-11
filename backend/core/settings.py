@@ -45,6 +45,10 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_yasg',
     'corsheaders',
+
+    # celery
+    'django_celery_beat',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -202,3 +206,25 @@ LOGGING = {
         'level': 'WARNING',
     },
 }
+
+
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Africa/Cairo'
+CELERY_ENABLE_UTC = False
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 دقيقة
+CELERY_TASK_SOFT_TIME_LIMIT = 20 * 60  # 20 دقيقة
+
+
+
+NOTIFICATION_STOCK_THRESHOLD_DAYS = 3  # أيام قبل نفاذ المخزون
+NOTIFICATION_SHIPMENT_THRESHOLD_DAYS = 3  # أيام قبل موعد الشحنة
+NOTIFICATION_COLLECTION_THRESHOLD_DAYS = 3  # أيام قبل موعد التحصيل
+NOTIFICATION_PAYMENT_THRESHOLD_DAYS = 7  # أيام قبل موعد الدفع
+
