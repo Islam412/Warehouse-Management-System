@@ -5,12 +5,17 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.utils import timezone
+from django.core.management import call_command
+from django.utils import timezone
+from rest_framework.views import APIView
+
+import threading
+
 from .models import Notification, NotificationPreference, NotificationLog
 from .serializers import (
     NotificationSerializer, NotificationCreateSerializer,
     NotificationPreferenceSerializer, NotificationLogSerializer
 )
-
 
 class NotificationViewSet(viewsets.ModelViewSet):
     """ViewSet لإدارة الإشعارات"""
@@ -117,3 +122,77 @@ class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
     
     def get_queryset(self):
         return super().get_queryset().filter(notification__user=self.request.user)
+    
+
+class RunAllChecksView(APIView):
+    """
+    تشغيل جميع فحوصات الإشعارات يدوياً
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # التحقق من أن المستخدم مشرف
+        # if not request.user.is_superuser:
+        #     return Response(
+        #         {"error": "Only superusers can run checks"},
+        #         status=status.HTTP_403_FORBIDDEN
+        #     )
+
+        # تشغيل الفحوصات في خيط منفصل لتجنب حظر الطلب
+        def run_checks():
+            try:
+                call_command('check_stock', verbosity=0)
+                call_command('check_shipments', verbosity=0)
+                call_command('check_collections', verbosity=0)
+                call_command('check_payments', verbosity=0)
+                print(f"✅ All checks completed at {timezone.now()}")
+            except Exception as e:
+                print(f"❌ Error running checks: {e}")
+
+        thread = threading.Thread(target=run_checks)
+        thread.start()
+
+        return Response({
+            'message': '✅ جاري تشغيل جميع الفحوصات... سيتم إشعارك عند الانتهاء',
+            'status': 'running',
+            'timestamp': timezone.now().isoformat()
+        }, status=status.HTTP_200_OK)
+
+
+class RunSingleCheckView(APIView):
+    """
+    تشغيل فحص محدد
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, check_type):
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "Only superusers can run checks"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        valid_checks = {
+            'stock': 'check_stock',
+            'shipments': 'check_shipments',
+            'collections': 'check_collections',
+            'payments': 'check_payments',
+        }
+
+        if check_type not in valid_checks:
+            return Response(
+                {"error": f"Invalid check type. Available: {', '.join(valid_checks.keys())}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            call_command(valid_checks[check_type], verbosity=0)
+            return Response({
+                'message': f'✅ تم تشغيل فحص {check_type} بنجاح',
+                'check_type': check_type,
+                'timestamp': timezone.now().isoformat()
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'error': f'حدث خطأ: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

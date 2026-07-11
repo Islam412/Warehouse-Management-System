@@ -11,4 +11,6 @@ router.register(r'logs', api.NotificationLogViewSet, basename='log')
 
 urlpatterns = [
     path('api/', include(router.urls)),
+    path('api/run-all-checks/', api.RunAllChecksView.as_view(), name='run-all-checks'),
+    path('api/run-check/<str:check_type>/', api.RunSingleCheckView.as_view(), name='run-check'),
 ]
