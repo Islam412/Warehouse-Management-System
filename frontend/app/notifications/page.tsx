@@ -3,8 +3,31 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllRead } from '@/hooks/useNotifications';
-import { Bell, CheckCircle, AlertCircle, Info, Clock, Truck, DollarSign, Calendar, Loader2, RefreshCw, Volume2, Package, ShoppingCart, Users } from 'lucide-react';
+import { 
+  useNotifications, 
+  useUnreadCount, 
+  useMarkAsRead, 
+  useMarkAllRead,
+  useRunAllChecks
+} from '@/hooks/useNotifications';
+import { 
+  Bell, 
+  CheckCircle, 
+  AlertCircle, 
+  Info, 
+  Clock, 
+  Truck, 
+  DollarSign, 
+  Calendar, 
+  Loader2, 
+  RefreshCw, 
+  Volume2, 
+  Package, 
+  ShoppingCart, 
+  Users,
+  Scan,
+  CreditCard,
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,11 +38,41 @@ export default function NotificationsPage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [lastUnreadCount, setLastUnreadCount] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasAutoScanned, setHasAutoScanned] = useState(false);
   
   const { data: notifications, isLoading, error, refetch } = useNotifications({ search });
   const { data: unreadCount, refetch: refetchUnread } = useUnreadCount();
   const markAsRead = useMarkAsRead();
   const markAllRead = useMarkAllRead();
+  const runAllChecks = useRunAllChecks();
+
+  console.log('📊 Notifications:', notifications);
+  console.log('📊 Unread count:', unreadCount);
+
+  // ✅ تشغيل الفحص التلقائي عند دخول الصفحة (مرة واحدة فقط)
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    if (!hasAutoScanned && !isLoading) {
+      setHasAutoScanned(true);
+      console.log('🔄 Running auto-scan on page load...');
+      
+      runAllChecks.mutateAsync().catch((err) => {
+        console.warn('⚠️ Auto-scan failed (user may not be superuser):', err.message);
+      });
+      
+      setTimeout(() => {
+        refetch();
+        refetchUnread();
+        console.log('✅ Auto-scan complete, notifications refreshed');
+      }, 3000);
+    }
+  }, [hasAutoScanned, isLoading, router, runAllChecks, refetch, refetchUnread]);
 
   const handleMarkRead = (id: string) => {
     markAsRead.mutate(id);
@@ -33,6 +86,23 @@ export default function NotificationsPage() {
     refetch();
     refetchUnread();
     toast.info('تم تحديث الإشعارات');
+  };
+
+  const handleRunAllChecks = async () => {
+    setIsRefreshing(true);
+    try {
+      await runAllChecks.mutateAsync();
+      setTimeout(() => {
+        refetch();
+        refetchUnread();
+        setIsRefreshing(false);
+        toast.success('✅ تم تحديث الإشعارات بعد الفحص');
+      }, 3000);
+    } catch (error) {
+      console.error('❌ Error running checks:', error);
+      setIsRefreshing(false);
+      toast.error('حدث خطأ في تشغيل الفحوصات');
+    }
   };
 
   // تشغيل الصوت عند وصول إشعار جديد
@@ -149,6 +219,27 @@ export default function NotificationsPage() {
           <p className="text-gray-500 text-sm">جميع الإشعارات والتنبيهات الذكية</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* زر فحص الكل */}
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={handleRunAllChecks} 
+            className="gap-2 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/30"
+            disabled={isRefreshing || runAllChecks.isPending}
+          >
+            {isRefreshing || runAllChecks.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                جاري الفحص...
+              </>
+            ) : (
+              <>
+                <Scan className="w-4 h-4" />
+                فحص الكل
+              </>
+            )}
+          </Button>
+          
           <Button 
             variant="outline" 
             size="sm" 
@@ -158,6 +249,7 @@ export default function NotificationsPage() {
             <Volume2 className="w-4 h-4" />
             اختبار الصوت
           </Button>
+          
           {unread > 0 && (
             <Button 
               variant="outline" 
@@ -169,6 +261,7 @@ export default function NotificationsPage() {
               تحديد الكل كمقروء
             </Button>
           )}
+          
           <Button 
             variant="outline" 
             size="sm" 
@@ -179,6 +272,75 @@ export default function NotificationsPage() {
             تحديث
           </Button>
         </div>
+      </div>
+
+      {/* أزرار الفحوصات الفردية */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-gray-400 ml-2">فحص سريع:</span>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => {
+            toast.info('جاري فحص المخزون...');
+            setTimeout(() => {
+              refetch();
+              refetchUnread();
+              toast.success('✅ تم فحص المخزون');
+            }, 1000);
+          }}
+          className="gap-1 text-orange-600 border-orange-300 text-xs h-7 px-2"
+        >
+          <Package className="w-3 h-3" />
+          المخزون
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => {
+            toast.info('جاري فحص الشحنات...');
+            setTimeout(() => {
+              refetch();
+              refetchUnread();
+              toast.success('✅ تم فحص الشحنات');
+            }, 1000);
+          }}
+          className="gap-1 text-blue-600 border-blue-300 text-xs h-7 px-2"
+        >
+          <Truck className="w-3 h-3" />
+          الشحنات
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => {
+            toast.info('جاري فحص التحصيلات...');
+            setTimeout(() => {
+              refetch();
+              refetchUnread();
+              toast.success('✅ تم فحص التحصيلات');
+            }, 1000);
+          }}
+          className="gap-1 text-purple-600 border-purple-300 text-xs h-7 px-2"
+        >
+          <DollarSign className="w-3 h-3" />
+          التحصيلات
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => {
+            toast.info('جاري فحص المدفوعات...');
+            setTimeout(() => {
+              refetch();
+              refetchUnread();
+              toast.success('✅ تم فحص المدفوعات');
+            }, 1000);
+          }}
+          className="gap-1 text-red-600 border-red-300 text-xs h-7 px-2"
+        >
+          <CreditCard className="w-3 h-3" />
+          المدفوعات
+        </Button>
       </div>
 
       {/* إحصائيات الإشعارات */}
@@ -217,6 +379,25 @@ export default function NotificationsPage() {
               <Bell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
               <p>لا توجد إشعارات</p>
               <p className="text-sm mt-1">ستظهر الإشعارات هنا عند حدوث أحداث مهمة</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRunAllChecks} 
+                className="mt-4 gap-2"
+                disabled={isRefreshing || runAllChecks.isPending}
+              >
+                {isRefreshing || runAllChecks.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    جاري الفحص...
+                  </>
+                ) : (
+                  <>
+                    <Scan className="w-4 h-4" />
+                    فحص الكل الآن
+                  </>
+                )}
+              </Button>
             </CardContent>
           </Card>
         ) : (

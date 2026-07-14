@@ -59,6 +59,16 @@ export const notificationsApi = {
   getLogs: (params?: any) => {
     return apiClient.get('/notifications/api/logs/', { params });
   },
+
+  // ✅ تشغيل جميع الفحوصات
+  runAllChecks: () => {
+    return apiClient.post('/notifications/api/run-all-checks/');
+  },
+  
+  // ✅ تشغيل فحص محدد
+  runCheck: (checkType: 'stock' | 'shipments' | 'collections' | 'payments') => {
+    return apiClient.post(`/notifications/api/run-check/${checkType}/`);
+  },
 };
 
 export default notificationsApi;

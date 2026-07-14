@@ -23,6 +23,8 @@ export const setTokens = (access: string, refresh: string) => {
 
 export const getAccessToken = (): string | null => {
   const token = localStorage.getItem(TOKEN_KEY);
+  console.log('🔑 Token from localStorage:', token ? 'exists' : 'null');
+  
   if (token) return token;
   return Cookies.get(TOKEN_KEY) || null;
 };

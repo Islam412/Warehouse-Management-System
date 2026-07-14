@@ -29,15 +29,6 @@ export const useInventoryReport = () => {
   });
 };
 
-export const useProfitLossReport = () => {
-  return useMutation({
-    mutationFn: (data: any) => reportsApi.profitLoss(data).then(res => res.data),
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'حدث خطأ في تحميل تقرير الأرباح والخسائر');
-    },
-  });
-};
-
 export const useCustomersReport = () => {
   return useMutation({
     mutationFn: (data: any) => reportsApi.customers(data).then(res => res.data),
