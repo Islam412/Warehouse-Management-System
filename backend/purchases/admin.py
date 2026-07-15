@@ -3,6 +3,7 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from .models import PurchaseOrder, PurchaseItem
 
+
 class PurchaseItemInline(admin.TabularInline):
     """عرض بنود أمر الشراء داخل الأمر"""
     model = PurchaseItem
@@ -10,6 +11,7 @@ class PurchaseItemInline(admin.TabularInline):
     fields = ['product', 'quantity', 'unit_price', 'discount', 'tax', 'total', 'received_quantity']
     readonly_fields = ['total']
     raw_id_fields = ['product']
+
 
 @admin.register(PurchaseOrder)
 class PurchaseOrderAdmin(admin.ModelAdmin):
@@ -46,9 +48,14 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
     )
     
     def total_display(self, obj):
-        """عرض الإجمالي بشكل منسق"""
-        return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', obj.total)
+        """عرض الإجمالي بشكل منسق - ✅ تم الإصلاح"""
+        try:
+            total = float(obj.total) if obj.total else 0
+            return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', total)
+        except (ValueError, TypeError):
+            return format_html('<span style="font-weight: bold;">0.00 جنيه</span>')
     total_display.short_description = _('الإجمالي')
+    total_display.admin_order_field = 'total'
     
     def status_display(self, obj):
         """عرض الحالة بشكل منسق"""
@@ -65,22 +72,20 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
     actions = ['mark_as_ordered', 'mark_as_received', 'mark_as_cancelled']
     
     def mark_as_ordered(self, request, queryset):
-        """تحديد كـ تم الطلب"""
         updated = queryset.filter(status='draft').update(status='ordered')
         self.message_user(request, f'تم تحديث {updated} أمر(أوامر) إلى "تم الطلب".')
     mark_as_ordered.short_description = _('تحديد كـ "تم الطلب"')
     
     def mark_as_received(self, request, queryset):
-        """تحديد كـ تم الاستلام"""
         updated = queryset.filter(status='ordered').update(status='received')
         self.message_user(request, f'تم تحديث {updated} أمر(أوامر) إلى "تم الاستلام".')
     mark_as_received.short_description = _('تحديد كـ "تم الاستلام"')
     
     def mark_as_cancelled(self, request, queryset):
-        """تحديد كـ ملغي"""
         updated = queryset.filter(status__in=['draft', 'ordered']).update(status='cancelled')
         self.message_user(request, f'تم إلغاء {updated} أمر(أوامر).')
     mark_as_cancelled.short_description = _('تحديد كـ "ملغي"')
+
 
 @admin.register(PurchaseItem)
 class PurchaseItemAdmin(admin.ModelAdmin):
@@ -92,5 +97,10 @@ class PurchaseItemAdmin(admin.ModelAdmin):
     ordering = ['-order__order_date']
     
     def total_display(self, obj):
-        return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', obj.total)
+        """عرض الإجمالي بشكل منسق - ✅ تم الإصلاح"""
+        try:
+            total = float(obj.total) if obj.total else 0
+            return format_html('<span style="font-weight: bold;">{:.2f} جنيه</span>', total)
+        except (ValueError, TypeError):
+            return format_html('<span style="font-weight: bold;">0.00 جنيه</span>')
     total_display.short_description = _('الإجمالي')
