@@ -29,13 +29,6 @@ import { cn } from '@/lib/utils';
 import { useUnreadCount } from '@/hooks/useNotifications';
 import { logout, getAccessToken } from '@/lib/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
 
 const menuItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'لوحة التحكم' },
@@ -63,6 +56,7 @@ export function Sidebar() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -70,33 +64,50 @@ export function Sidebar() {
     setIsAuthenticated(!!token);
     if (token) {
       fetchUserData();
+    } else {
+      setLoading(false);
     }
   }, []);
 
+  // ✅ جلب بيانات المستخدم والبروفايل
   const fetchUserData = async () => {
     const token = getAccessToken();
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
     try {
-      // جلب بيانات المستخدم
+      // 1. جلب بيانات المستخدم
       const userRes = await fetch('http://localhost:8000/api/v1/auth/api/account/me/', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       if (userRes.ok) {
         const userData = await userRes.json();
         setUser(userData);
+        console.log('✅ User data loaded:', userData);
+      } else {
+        console.error('❌ Failed to load user data:', userRes.status);
       }
 
-      // جلب البروفايل
+      // 2. جلب البروفايل
       const profileRes = await fetch('http://localhost:8000/api/v1/auth/api/profile/me/', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       if (profileRes.ok) {
         const profileData = await profileRes.json();
         setProfile(profileData);
+        console.log('✅ Profile data loaded:', profileData);
+      } else {
+        console.error('❌ Failed to load profile data:', profileRes.status);
       }
+
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('❌ Error fetching user data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -117,13 +128,37 @@ export function Sidebar() {
 
   if (!isAuthenticated) return null;
 
-  // ✅ اسم المستخدم والأحرف الأولى
-  const fullName = user?.first_name && user?.last_name 
-    ? `${user.first_name} ${user.last_name}` 
-    : user?.username || 'مستخدم';
-  
-  const initials = (user?.first_name?.[0] || '') + (user?.last_name?.[0] || '') || user?.username?.[0] || 'U';
+  // ✅ استخراج اسم المستخدم - الأولوية: first_name + last_name > username > 'مستخدم'
+  const firstName = user?.first_name || '';
+  const lastName = user?.last_name || '';
+  const username = user?.username || '';
+  const email = user?.email || '';
+
+  // ✅ الاسم المعروض
+  let displayName = 'مستخدم';
+  if (firstName && lastName) {
+    displayName = `${firstName} ${lastName}`;
+  } else if (firstName) {
+    displayName = firstName;
+  } else if (username) {
+    displayName = username;
+  }
+
+  // ✅ الأحرف الأولى للصورة الرمزية
+  let initials = 'U';
+  if (firstName && lastName) {
+    initials = (firstName[0] || '') + (lastName[0] || '');
+  } else if (firstName) {
+    initials = firstName[0] || 'U';
+  } else if (username) {
+    initials = username[0]?.toUpperCase() || 'U';
+  }
+
+  // ✅ صورة البروفايل
   const profileImage = profile?.cover_images || '';
+
+  // ✅ البريد الإلكتروني للعرض
+  const displayEmail = email || '';
 
   return (
     <>
@@ -211,7 +246,7 @@ export function Sidebar() {
           {/* الفاصل */}
           <div className="my-4 border-t border-border" />
 
-          {/* ✅ الملف الشخصي مع الصورة */}
+          {/* ✅ الملف الشخصي مع الصورة واسم المستخدم */}
           <Link
             href="/profile"
             className={cn(
@@ -222,29 +257,31 @@ export function Sidebar() {
             )}
             onClick={() => setIsMobileOpen(false)}
           >
-            <Avatar className="w-5 h-5">
+            <Avatar className="w-8 h-8">
               <AvatarImage 
                 src={profileImage} 
-                alt={fullName}
+                alt={displayName}
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+              <AvatarFallback className="text-sm bg-primary/10 text-primary font-medium">
                 {initials}
               </AvatarFallback>
             </Avatar>
             {!isCollapsed && (
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <span className={cn(
-                  "text-sm font-medium",
+                  "text-sm font-medium truncate",
                   pathname === '/profile' ? "text-primary" : "text-foreground"
                 )}>
-                  {fullName}
+                  {displayName}
                 </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {user?.email || ''}
-                </span>
+                {displayEmail && (
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    {displayEmail}
+                  </span>
+                )}
               </div>
             )}
           </Link>
