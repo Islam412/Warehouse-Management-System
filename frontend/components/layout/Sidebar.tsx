@@ -28,6 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useUnreadCount } from '@/hooks/useNotifications';
 import { logout, getAccessToken } from '@/lib/auth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,13 +59,46 @@ export function Sidebar() {
   const [mounted, setMounted] = useState(false);
   const { data: unreadCount } = useUnreadCount();
 
-  // التحقق من المصادقة
+  // ✅ بيانات المستخدم
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
+
   useEffect(() => {
     setMounted(true);
-    setIsAuthenticated(!!getAccessToken());
+    const token = getAccessToken();
+    setIsAuthenticated(!!token);
+    if (token) {
+      fetchUserData();
+    }
   }, []);
+
+  const fetchUserData = async () => {
+    const token = getAccessToken();
+    if (!token) return;
+
+    try {
+      // جلب بيانات المستخدم
+      const userRes = await fetch('http://localhost:8000/api/v1/auth/api/account/me/', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        setUser(userData);
+      }
+
+      // جلب البروفايل
+      const profileRes = await fetch('http://localhost:8000/api/v1/auth/api/profile/me/', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        setProfile(profileData);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -82,6 +116,14 @@ export function Sidebar() {
   }, []);
 
   if (!isAuthenticated) return null;
+
+  // ✅ اسم المستخدم والأحرف الأولى
+  const fullName = user?.first_name && user?.last_name 
+    ? `${user.first_name} ${user.last_name}` 
+    : user?.username || 'مستخدم';
+  
+  const initials = (user?.first_name?.[0] || '') + (user?.last_name?.[0] || '') || user?.username?.[0] || 'U';
+  const profileImage = profile?.cover_images || '';
 
   return (
     <>
@@ -169,7 +211,7 @@ export function Sidebar() {
           {/* الفاصل */}
           <div className="my-4 border-t border-border" />
 
-          {/* الملف الشخصي */}
+          {/* ✅ الملف الشخصي مع الصورة */}
           <Link
             href="/profile"
             className={cn(
@@ -180,17 +222,30 @@ export function Sidebar() {
             )}
             onClick={() => setIsMobileOpen(false)}
           >
-            <User className={cn(
-              "w-5 h-5 flex-shrink-0",
-              pathname === '/profile' ? "text-primary" : "text-muted-foreground"
-            )} />
+            <Avatar className="w-5 h-5">
+              <AvatarImage 
+                src={profileImage} 
+                alt={fullName}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
             {!isCollapsed && (
-              <span className={cn(
-                "text-sm font-medium",
-                pathname === '/profile' ? "text-primary" : "text-foreground"
-              )}>
-                الملف الشخصي
-              </span>
+              <div className="flex flex-col">
+                <span className={cn(
+                  "text-sm font-medium",
+                  pathname === '/profile' ? "text-primary" : "text-foreground"
+                )}>
+                  {fullName}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {user?.email || ''}
+                </span>
+              </div>
             )}
           </Link>
 
