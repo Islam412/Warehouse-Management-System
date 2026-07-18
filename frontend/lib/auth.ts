@@ -1,3 +1,4 @@
+// frontend/lib/auth.ts
 'use client';
 
 import Cookies from 'js-cookie';
@@ -23,8 +24,6 @@ export const setTokens = (access: string, refresh: string) => {
 
 export const getAccessToken = (): string | null => {
   const token = localStorage.getItem(TOKEN_KEY);
-  console.log('🔑 Token from localStorage:', token ? 'exists' : 'null');
-  
   if (token) return token;
   return Cookies.get(TOKEN_KEY) || null;
 };
@@ -80,6 +79,52 @@ export const refreshToken = async (): Promise<string | null> => {
   } catch (error) {
     console.error('Error refreshing token:', error);
     logout();
+    return null;
+  }
+};
+
+// ✅ جلب معلومات المستخدم الحالي
+export const getCurrentUser = async (): Promise<any | null> => {
+  try {
+    const token = getAccessToken();
+    if (!token) return null;
+
+    const response = await fetch('http://localhost:8000/api/v1/auth/api/account/me/', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    return null;
+  }
+};
+
+// ✅ جلب الملف الشخصي للمستخدم الحالي
+export const getCurrentProfile = async (): Promise<any | null> => {
+  try {
+    const token = getAccessToken();
+    if (!token) return null;
+
+    const response = await fetch('http://localhost:8000/api/v1/auth/api/profile/me/', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching current profile:', error);
     return null;
   }
 };

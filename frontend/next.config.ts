@@ -1,9 +1,9 @@
+// frontend/next.config.ts
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   
-  // إعدادات الصور - الطريقة الصحيحة
   images: {
     remotePatterns: [
       {
@@ -19,10 +19,8 @@ const nextConfig: NextConfig = {
         pathname: '/media/**',
       },
     ],
+    unoptimized: process.env.NODE_ENV === 'development',
   },
-  
-  // إزالة i18n من هنا - سنستخدم middleware بدلاً من ذلك
-  // i18n تم إزالته لأنه غير مدعوم في App Router
 };
 
 export default nextConfig;
