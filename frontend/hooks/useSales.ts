@@ -1,3 +1,4 @@
+// frontend/hooks/useSales.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { salesApi } from '@/lib/api/endpoints/sales';
 import { Invoice, Payment, Return } from '@/types';
@@ -115,6 +116,7 @@ export const useAddPayment = () => {
     onSuccess: (data, { invoiceId }) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
       toast.success('تم إضافة الدفعة بنجاح');
     },
     onError: (error: any) => {
@@ -154,6 +156,7 @@ export const useAddReturn = () => {
     onSuccess: (data, { invoiceId }) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
       toast.success('تم إضافة المرتجع بنجاح');
     },
     onError: (error: any) => {

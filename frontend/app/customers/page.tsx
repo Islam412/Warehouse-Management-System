@@ -97,12 +97,47 @@ import {
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'];
 
+// ============================================
+// ✅ Types
+// ============================================
+interface Customer {
+  id: string;
+  name: string;
+  name_ar?: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  balance: string | number;
+  credit_limit?: string | number;
+  is_active: boolean;
+  is_vip: boolean;
+  total_purchases?: string | number;
+  total_invoices?: number;
+  outstanding_balance?: string | number;
+  total_paid?: string | number;
+  notes?: string;
+  tax_number?: string;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+}
+
+// ============================================
+// ✅ Helper Functions
+// ============================================
+const toNumber = (value: any): number => {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return parseFloat(value) || 0;
+  return 0;
+};
+
 export default function CustomersPage() {
   const [search, setSearch] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [customerToDelete, setCustomerToDelete] = useState<any>(null);
-  const [customerToEdit, setCustomerToEdit] = useState<any>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editKey, setEditKey] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
@@ -110,7 +145,8 @@ export default function CustomersPage() {
   const { data: customersData, isLoading, error, refetch } = useCustomers({ search });
   const deleteCustomer = useDeleteCustomer();
 
-  const customers = Array.isArray(customersData) ? customersData : 
+  // ✅ تأكد من أن customers هي مصفوفة
+  const customers: Customer[] = Array.isArray(customersData) ? customersData : 
                      customersData?.results ? customersData.results : [];
 
   // ============================================
@@ -118,41 +154,41 @@ export default function CustomersPage() {
   // ============================================
 
   // العملاء المميزين (VIP)
-  const vipCustomers = customers.filter(c => c.is_vip && c.is_active);
+  const vipCustomers = customers.filter((c: Customer) => c.is_vip && c.is_active);
   
   // العملاء العاديين
-  const regularCustomers = customers.filter(c => !c.is_vip && c.is_active);
+  const regularCustomers = customers.filter((c: Customer) => !c.is_vip && c.is_active);
   
   // العملاء المحظورين
-  const blockedCustomers = customers.filter(c => !c.is_active);
+  const blockedCustomers = customers.filter((c: Customer) => !c.is_active);
   
   // العملاء الذين عليهم أقساط
-  const customersWithDebt = customers.filter(c => parseFloat(c.balance || 0) < 0);
+  const customersWithDebt = customers.filter((c: Customer) => toNumber(c.balance) < 0);
   
   // العملاء الذين لديهم رصيد إيجابي
-  const customersWithCredit = customers.filter(c => parseFloat(c.balance || 0) > 0);
+  const customersWithCredit = customers.filter((c: Customer) => toNumber(c.balance) > 0);
 
   // العملاء الأكثر تفاعل
   const topInteractive = useMemo(() => {
     return [...customers]
-      .filter(c => c.is_active)
-      .sort((a, b) => parseFloat(b.total_purchases || 0) - parseFloat(a.total_purchases || 0))
+      .filter((c: Customer) => c.is_active)
+      .sort((a: Customer, b: Customer) => toNumber(b.total_purchases) - toNumber(a.total_purchases))
       .slice(0, 10);
   }, [customers]);
 
   // العملاء الأقل تفاعل
   const leastInteractive = useMemo(() => {
     return [...customers]
-      .filter(c => c.is_active)
-      .sort((a, b) => parseFloat(a.total_purchases || 0) - parseFloat(b.total_purchases || 0))
+      .filter((c: Customer) => c.is_active)
+      .sort((a: Customer, b: Customer) => toNumber(a.total_purchases) - toNumber(b.total_purchases))
       .slice(0, 10);
   }, [customers]);
 
   // العملاء غير النشطين (لم يشتروا منذ فترة)
   const inactiveCustomers = useMemo(() => {
     return customers
-      .filter(c => c.is_active)
-      .filter(c => {
+      .filter((c: Customer) => c.is_active)
+      .filter((c: Customer) => {
         if (!c.updated_at) return false;
         const lastUpdate = new Date(c.updated_at);
         const daysDiff = (new Date().getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
@@ -164,8 +200,8 @@ export default function CustomersPage() {
   // العملاء الأكثر ولاءً (أكبر عدد فواتير)
   const loyalCustomers = useMemo(() => {
     return [...customers]
-      .filter(c => c.is_active)
-      .sort((a, b) => (b.total_invoices || 0) - (a.total_invoices || 0))
+      .filter((c: Customer) => c.is_active)
+      .sort((a: Customer, b: Customer) => (b.total_invoices || 0) - (a.total_invoices || 0))
       .slice(0, 10);
   }, [customers]);
 
@@ -179,40 +215,40 @@ export default function CustomersPage() {
   const totalBlocked = blockedCustomers.length;
   const totalWithDebt = customersWithDebt.length;
   const totalWithCredit = customersWithCredit.length;
-  const totalDebt = customersWithDebt.reduce((sum, c) => sum + parseFloat(c.balance || 0), 0);
+  const totalDebt = customersWithDebt.reduce((sum, c) => sum + toNumber(c.balance), 0);
   const avgSpending = customers.length > 0 
-    ? customers.reduce((sum, c) => sum + parseFloat(c.total_purchases || 0), 0) / customers.length 
+    ? customers.reduce((sum, c) => sum + toNumber(c.total_purchases), 0) / customers.length 
     : 0;
 
-  // بيانات الرسم البياني
+  // ✅ بيانات الرسم البياني
   const pieData = [
     { name: 'مميزين (VIP)', value: totalVIP },
     { name: 'عاديين', value: totalRegular },
     { name: 'محظورين', value: totalBlocked },
   ];
 
-  const debtData = customersWithDebt.slice(0, 10).map(c => ({
+  const debtData = customersWithDebt.slice(0, 10).map((c: Customer) => ({
     name: c.name.length > 10 ? c.name.substring(0, 10) + '...' : c.name,
-    debt: Math.abs(parseFloat(c.balance || 0)),
+    debt: Math.abs(toNumber(c.balance)),
   }));
 
   // بيانات مقارنة VIP
   const vipComparison = useMemo(() => {
-    const vip = customers.filter(c => c.is_vip && c.is_active);
-    const regular = customers.filter(c => !c.is_vip && c.is_active);
+    const vip = customers.filter((c: Customer) => c.is_vip && c.is_active);
+    const regular = customers.filter((c: Customer) => !c.is_vip && c.is_active);
     
     const avgVipPurchase = vip.length > 0 
-      ? vip.reduce((sum, c) => sum + parseFloat(c.total_purchases || 0), 0) / vip.length 
+      ? vip.reduce((sum, c) => sum + toNumber(c.total_purchases), 0) / vip.length 
       : 0;
     const avgRegularPurchase = regular.length > 0 
-      ? regular.reduce((sum, c) => sum + parseFloat(c.total_purchases || 0), 0) / regular.length 
+      ? regular.reduce((sum, c) => sum + toNumber(c.total_purchases), 0) / regular.length 
       : 0;
     
     const avgVipBalance = vip.length > 0 
-      ? vip.reduce((sum, c) => sum + parseFloat(c.balance || 0), 0) / vip.length 
+      ? vip.reduce((sum, c) => sum + toNumber(c.balance), 0) / vip.length 
       : 0;
     const avgRegularBalance = regular.length > 0 
-      ? regular.reduce((sum, c) => sum + parseFloat(c.balance || 0), 0) / regular.length 
+      ? regular.reduce((sum, c) => sum + toNumber(c.balance), 0) / regular.length 
       : 0;
 
     return {
@@ -222,8 +258,8 @@ export default function CustomersPage() {
       avgRegularPurchase,
       avgVipBalance,
       avgRegularBalance,
-      vipTotalPurchases: vip.reduce((sum, c) => sum + parseFloat(c.total_purchases || 0), 0),
-      regularTotalPurchases: regular.reduce((sum, c) => sum + parseFloat(c.total_purchases || 0), 0),
+      vipTotalPurchases: vip.reduce((sum, c) => sum + toNumber(c.total_purchases), 0),
+      regularTotalPurchases: regular.reduce((sum, c) => sum + toNumber(c.total_purchases), 0),
     };
   }, [customers]);
 
@@ -236,15 +272,15 @@ export default function CustomersPage() {
 
   // مستوى الإنفاق
   const spendingLevels = useMemo(() => {
-    const levels = {
+    const levels: Record<string, number> = {
       'منخفض (0-500)': 0,
       'متوسط (501-2000)': 0,
       'مرتفع (2001-5000)': 0,
       'ممتاز (>5000)': 0,
     };
     
-    customers.forEach(c => {
-      const total = parseFloat(c.total_purchases || 0);
+    customers.forEach((c: Customer) => {
+      const total = toNumber(c.total_purchases);
       if (total <= 500) levels['منخفض (0-500)']++;
       else if (total <= 2000) levels['متوسط (501-2000)']++;
       else if (total <= 5000) levels['مرتفع (2001-5000)']++;
@@ -257,7 +293,7 @@ export default function CustomersPage() {
   // توزيع حسب المدينة
   const cityDistribution = useMemo(() => {
     const cities: Record<string, number> = {};
-    customers.forEach(c => {
+    customers.forEach((c: Customer) => {
       if (c.address) {
         const city = c.address.split(',')[0]?.trim() || 'غير محدد';
         cities[city] = (cities[city] || 0) + 1;
@@ -284,7 +320,7 @@ export default function CustomersPage() {
       data[key] = 0;
     }
     
-    customers.forEach(c => {
+    customers.forEach((c: Customer) => {
       if (c.created_at) {
         const date = new Date(c.created_at);
         const key = `${months[date.getMonth()]} ${date.getFullYear()}`;
@@ -309,12 +345,12 @@ export default function CustomersPage() {
     refetch();
   };
 
-  const openDeleteDialog = (customer: any) => {
+  const openDeleteDialog = (customer: Customer) => {
     setCustomerToDelete(customer);
     setDeleteDialogOpen(true);
   };
 
-  const openEditDialog = (customer: any) => {
+  const openEditDialog = (customer: Customer) => {
     setCustomerToEdit(customer);
     setEditKey(prev => prev + 1);
     setIsEditDialogOpen(true);
@@ -506,7 +542,11 @@ export default function CustomersPage() {
                         outerRadius={90}
                         paddingAngle={5}
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => {
+                          // ✅ التحقق من أن percent ليس undefined
+                          const safePercent = percent ?? 0;
+                          return `${name} ${(safePercent * 100).toFixed(0)}%`;
+                        }}
                       >
                         {pieData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -593,7 +633,7 @@ export default function CustomersPage() {
                 {topInteractive.length === 0 ? (
                   <p className="text-center text-gray-500 py-4">لا توجد بيانات</p>
                 ) : (
-                  topInteractive.slice(0, 10).map((customer, index) => (
+                  topInteractive.slice(0, 10).map((customer: Customer, index: number) => (
                     <div key={customer.id} className="flex items-center justify-between p-3 hover:bg-muted rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
                         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${
@@ -610,7 +650,7 @@ export default function CustomersPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-green-600">
-                          {parseFloat(customer.total_purchases || 0).toFixed(2)} ج.م
+                          {toNumber(customer.total_purchases).toFixed(2)} ج.م
                         </p>
                         <p className="text-xs text-muted-foreground">{customer.total_invoices || 0} فاتورة</p>
                       </div>
@@ -640,7 +680,7 @@ export default function CustomersPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {inactiveCustomers.map((customer, index) => {
+                  {inactiveCustomers.map((customer: Customer, index: number) => {
                     const daysInactive = customer.updated_at 
                       ? Math.floor((new Date().getTime() - new Date(customer.updated_at).getTime()) / (1000 * 60 * 60 * 24))
                       : 0;
@@ -681,7 +721,7 @@ export default function CustomersPage() {
                 {loyalCustomers.length === 0 ? (
                   <p className="text-center text-gray-500 py-4">لا توجد بيانات</p>
                 ) : (
-                  loyalCustomers.slice(0, 10).map((customer, index) => (
+                  loyalCustomers.slice(0, 10).map((customer: Customer, index: number) => (
                     <div key={customer.id} className="flex items-center justify-between p-3 hover:bg-muted rounded-lg transition-colors">
                       <div className="flex items-center gap-3">
                         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${
@@ -698,7 +738,7 @@ export default function CustomersPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-amber-600">{customer.total_invoices || 0} فاتورة</p>
-                        <p className="text-xs text-muted-foreground">{parseFloat(customer.total_purchases || 0).toFixed(2)} ج.م</p>
+                        <p className="text-xs text-muted-foreground">{toNumber(customer.total_purchases).toFixed(2)} ج.م</p>
                       </div>
                     </div>
                   ))
@@ -977,8 +1017,8 @@ export default function CustomersPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                customers.map((customer: any, index: number) => {
-                  const balance = parseFloat(customer.balance || 0);
+                customers.map((customer: Customer, index: number) => {
+                  const balance = toNumber(customer.balance);
                   const isBlocked = !customer.is_active;
                   const isVIP = customer.is_vip;
                   const hasDebt = balance < 0;

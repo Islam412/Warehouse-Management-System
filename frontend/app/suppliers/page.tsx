@@ -1,4 +1,3 @@
-// frontend/app/suppliers/page.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -78,6 +77,7 @@ import {
   ArrowUp,
   ArrowDown,
   MapPin,
+  Ban, // ✅ إضافة استيراد Ban
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -107,12 +107,44 @@ import {
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'];
 
+// ============================================
+// ✅ Types
+// ============================================
+interface Supplier {
+  id: string;
+  name: string;
+  name_ar?: string;
+  email?: string;
+  phone: string;
+  phone2?: string;
+  address?: string;
+  balance: number | string;
+  tax_number?: string;
+  notes?: string;
+  is_active: boolean;
+  total_purchases?: number | string;
+  created_by?: string;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ============================================
+// ✅ Helper Functions
+// ============================================
+const toNumber = (value: any): number => {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return parseFloat(value) || 0;
+  return 0;
+};
+
 export default function SuppliersPage() {
   const [search, setSearch] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [supplierToDelete, setSupplierToDelete] = useState<any>(null);
-  const [supplierToEdit, setSupplierToEdit] = useState<any>(null);
+  const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
+  const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editKey, setEditKey] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
@@ -120,7 +152,8 @@ export default function SuppliersPage() {
   const { data: suppliersData, isLoading, error, refetch } = useSuppliers({ search });
   const deleteSupplier = useDeleteSupplier();
 
-  const suppliers = Array.isArray(suppliersData) ? suppliersData : 
+  // ✅ تأكد من أن suppliers هي مصفوفة
+  const suppliers: Supplier[] = Array.isArray(suppliersData) ? suppliersData : 
                      suppliersData?.results ? suppliersData.results : [];
 
   // ============================================
@@ -131,8 +164,8 @@ export default function SuppliersPage() {
   // 1. إحصائيات عامة
   // ============================================
   const totalSuppliers = suppliers.length;
-  const activeSuppliers = suppliers.filter(s => s.is_active).length;
-  const totalPurchases = suppliers.reduce((sum, s) => sum + parseFloat(s.total_purchases || 0), 0);
+  const activeSuppliers = suppliers.filter((s: Supplier) => s.is_active).length;
+  const totalPurchases = suppliers.reduce((sum: number, s: Supplier) => sum + toNumber(s.total_purchases), 0);
   const avgPurchases = totalSuppliers > 0 ? totalPurchases / totalSuppliers : 0;
 
   // ============================================
@@ -140,8 +173,8 @@ export default function SuppliersPage() {
   // ============================================
   const mostDemanded = useMemo(() => {
     return [...suppliers]
-      .filter(s => s.is_active)
-      .sort((a, b) => parseFloat(b.total_purchases || 0) - parseFloat(a.total_purchases || 0))
+      .filter((s: Supplier) => s.is_active)
+      .sort((a: Supplier, b: Supplier) => toNumber(b.total_purchases) - toNumber(a.total_purchases))
       .slice(0, 10);
   }, [suppliers]);
 
@@ -150,15 +183,15 @@ export default function SuppliersPage() {
   // ============================================
   const leastDemanded = useMemo(() => {
     return [...suppliers]
-      .filter(s => s.is_active)
-      .sort((a, b) => parseFloat(a.total_purchases || 0) - parseFloat(b.total_purchases || 0))
+      .filter((s: Supplier) => s.is_active)
+      .sort((a: Supplier, b: Supplier) => toNumber(a.total_purchases) - toNumber(b.total_purchases))
       .slice(0, 10);
   }, [suppliers]);
 
   // ============================================
   // 4. الموردين المحظورين
   // ============================================
-  const blockedSuppliers = suppliers.filter(s => !s.is_active);
+  const blockedSuppliers = suppliers.filter((s: Supplier) => !s.is_active);
 
   // ============================================
   // 5. الموردين الأكثر ربحية (هامش ربح افتراضي)
@@ -166,8 +199,8 @@ export default function SuppliersPage() {
   const mostProfitable = useMemo(() => {
     // محاكاة: الموردين الذين لديهم أعلى رصيد
     return [...suppliers]
-      .filter(s => s.is_active)
-      .sort((a, b) => parseFloat(b.balance || 0) - parseFloat(a.balance || 0))
+      .filter((s: Supplier) => s.is_active)
+      .sort((a: Supplier, b: Supplier) => toNumber(b.balance) - toNumber(a.balance))
       .slice(0, 10);
   }, [suppliers]);
 
@@ -176,7 +209,7 @@ export default function SuppliersPage() {
   // ============================================
   const cityDistribution = useMemo(() => {
     const cities: Record<string, number> = {};
-    suppliers.forEach(s => {
+    suppliers.forEach((s: Supplier) => {
       if (s.address) {
         const city = s.address.split(',')[0]?.trim() || 'غير محدد';
         cities[city] = (cities[city] || 0) + 1;
@@ -195,11 +228,11 @@ export default function SuppliersPage() {
   // ============================================
   const marketShare = useMemo(() => {
     return suppliers
-      .filter(s => s.is_active)
-      .map(s => ({
+      .filter((s: Supplier) => s.is_active)
+      .map((s: Supplier) => ({
         name: s.name,
-        value: parseFloat(s.total_purchases || 0),
-        percentage: totalPurchases > 0 ? (parseFloat(s.total_purchases || 0) / totalPurchases) * 100 : 0,
+        value: toNumber(s.total_purchases),
+        percentage: totalPurchases > 0 ? (toNumber(s.total_purchases) / totalPurchases) * 100 : 0,
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
@@ -209,8 +242,8 @@ export default function SuppliersPage() {
   // 8. مقارنة الموردين (محاكاة)
   // ============================================
   const supplierComparison = useMemo(() => {
-    const topSuppliers = suppliers.filter(s => s.is_active).slice(0, 8);
-    return topSuppliers.map((s, index) => ({
+    const topSuppliers = suppliers.filter((s: Supplier) => s.is_active).slice(0, 8);
+    return topSuppliers.map((s: Supplier, index: number) => ({
       name: s.name.length > 15 ? s.name.substring(0, 15) + '...' : s.name,
       demand: Math.min(100, 30 + Math.random() * 70), // محاكاة الطلب
       price: Math.min(100, 20 + Math.random() * 80), // محاكاة السعر
@@ -225,10 +258,10 @@ export default function SuppliersPage() {
   // ============================================
   const productComparison = useMemo(() => {
     const products = ['منتج A', 'منتج B', 'منتج C', 'منتج D', 'منتج E'];
-    const topSuppliers = suppliers.filter(s => s.is_active).slice(0, 5);
+    const topSuppliers = suppliers.filter((s: Supplier) => s.is_active).slice(0, 5);
     
     return products.map(product => {
-      const supplierData = topSuppliers.map(s => ({
+      const supplierData = topSuppliers.map((s: Supplier) => ({
         supplier: s.name.length > 10 ? s.name.substring(0, 10) + '...' : s.name,
         price: 50 + Math.random() * 200,
         quality: 40 + Math.random() * 60,
@@ -254,12 +287,12 @@ export default function SuppliersPage() {
     refetch();
   };
 
-  const openDeleteDialog = (supplier: any) => {
+  const openDeleteDialog = (supplier: Supplier) => {
     setSupplierToDelete(supplier);
     setDeleteDialogOpen(true);
   };
 
-  const openEditDialog = (supplier: any) => {
+  const openEditDialog = (supplier: Supplier) => {
     setSupplierToEdit(supplier);
     setEditKey(prev => prev + 1);
     setIsEditDialogOpen(true);
@@ -432,7 +465,10 @@ export default function SuppliersPage() {
                         outerRadius={90}
                         paddingAngle={5}
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => {
+                          const safePercent = percent ?? 0;
+                          return `${name} ${(safePercent * 100).toFixed(0)}%`;
+                        }}
                       >
                         <Cell fill="#10b981" />
                         <Cell fill="#ef4444" />
@@ -492,9 +528,9 @@ export default function SuppliersPage() {
                 {mostDemanded.length === 0 ? (
                   <p className="text-center text-gray-500 py-4">لا توجد بيانات</p>
                 ) : (
-                  mostDemanded.map((supplier, index) => {
-                    const purchases = parseFloat(supplier.total_purchases || 0);
-                    const maxPurchase = mostDemanded[0]?.total_purchases || 1;
+                  mostDemanded.map((supplier: Supplier, index: number) => {
+                    const purchases = toNumber(supplier.total_purchases);
+                    const maxPurchase = toNumber(mostDemanded[0]?.total_purchases || 1);
                     const percentage = (purchases / maxPurchase) * 100;
                     
                     return (
@@ -548,8 +584,8 @@ export default function SuppliersPage() {
                 {leastDemanded.length === 0 ? (
                   <p className="text-center text-gray-500 py-4">لا توجد بيانات</p>
                 ) : (
-                  leastDemanded.map((supplier, index) => {
-                    const purchases = parseFloat(supplier.total_purchases || 0);
+                  leastDemanded.map((supplier: Supplier, index: number) => {
+                    const purchases = toNumber(supplier.total_purchases);
                     return (
                       <div key={supplier.id} className="flex items-center justify-between p-3 hover:bg-muted rounded-lg transition-colors border border-red-100 dark:border-red-800/30">
                         <div className="flex items-center gap-3">
@@ -716,7 +752,10 @@ export default function SuppliersPage() {
                         outerRadius={100}
                         paddingAngle={3}
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
+                        label={({ name, percent }) => {
+                          const safePercent = percent ?? 0;
+                          return `${name} ${(safePercent * 100).toFixed(1)}%`;
+                        }}
                       >
                         {marketShare.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -853,9 +892,9 @@ export default function SuppliersPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                suppliers.map((supplier: any, index: number) => {
-                  const balance = parseFloat(supplier.balance || 0);
-                  const purchases = parseFloat(supplier.total_purchases || 0);
+                suppliers.map((supplier: Supplier, index: number) => {
+                  const balance = toNumber(supplier.balance);
+                  const purchases = toNumber(supplier.total_purchases);
                   const isBlocked = !supplier.is_active;
 
                   return (

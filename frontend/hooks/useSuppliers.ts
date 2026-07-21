@@ -3,9 +3,7 @@ import { suppliersApi } from '@/lib/api/endpoints/suppliers';
 import { Supplier } from '@/types';
 import { toast } from 'sonner';
 
-// ============================================
-// Suppliers Hooks
-// ============================================
+
 
 export const useSuppliers = (params?: any) => {
   return useQuery({
@@ -107,6 +105,7 @@ export const useDeleteSupplier = () => {
   });
 };
 
+// ✅ إصلاح: إضافة useTopSuppliers
 export const useTopSuppliers = () => {
   return useQuery({
     queryKey: ['suppliers', 'top'],
@@ -115,5 +114,27 @@ export const useTopSuppliers = () => {
       return response.data;
     },
     staleTime: 60000,
+  });
+};
+
+// ✅ إضافة: تحديث رصيد المورد
+export const useUpdateSupplierBalance = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { amount: number; notes?: string } }) => {
+      console.log(`📤 Updating supplier ${id} balance:`, data);
+      const response = await suppliersApi.updateBalance(id, data);
+      return response.data;
+    },
+    onSuccess: (data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier', id] });
+      toast.success('تم تحديث رصيد المورد بنجاح');
+    },
+    onError: (error: any) => {
+      console.error('❌ Update supplier balance error:', error);
+      toast.error(error.response?.data?.detail || 'حدث خطأ في تحديث رصيد المورد');
+    },
   });
 };

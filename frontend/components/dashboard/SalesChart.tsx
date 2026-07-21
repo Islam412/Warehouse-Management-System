@@ -1,3 +1,4 @@
+// frontend/components/dashboard/SalesChart.tsx
 'use client';
 
 import { useState } from 'react';
@@ -35,18 +36,29 @@ const periods = [
   { value: 'year', label: 'سنة' },
 ];
 
+// ============================================
+// ✅ تعريف نوع البيانات للـ hover
+// ============================================
+interface HoverData {
+  date: string;
+  sales: number;
+}
+
 export function SalesChart({
   data,
   period,
   onPeriodChange,
   loading = false,
 }: SalesChartProps) {
-  const [hoveredData, setHoveredData] = useState<any>(null);
+  const [hoveredData, setHoveredData] = useState<HoverData | null>(null);
 
   const formatCurrency = (value: number) => {
     return `${value.toLocaleString('ar-EG')} ج.م`;
   };
 
+  // ============================================
+  // ✅ CustomTooltip مع التحقق من undefined
+  // ============================================
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -59,6 +71,18 @@ export function SalesChart({
       );
     }
     return null;
+  };
+
+  // ============================================
+  // ✅ معالج حدث hover مع التحقق من النوع
+  // ============================================
+  const handleMouseMove = (state: any) => {
+    if (state.activeTooltipIndex !== undefined && state.activePayload) {
+      const payload = state.activePayload[0]?.payload;
+      if (payload && typeof payload === 'object' && 'date' in payload && 'sales' in payload) {
+        setHoveredData(payload as HoverData);
+      }
+    }
   };
 
   if (loading) {
@@ -80,7 +104,9 @@ export function SalesChart({
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <CardTitle>المبيعات اليومية</CardTitle>
-          <CardDescription>آخر {period === 'day' ? '24 ساعة' : period === 'week' ? '7 أيام' : period === 'month' ? '30 يوم' : '12 شهر'}</CardDescription>
+          <CardDescription>
+            آخر {period === 'day' ? '24 ساعة' : period === 'week' ? '7 أيام' : period === 'month' ? '30 يوم' : '12 شهر'}
+          </CardDescription>
         </div>
         <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
           {periods.map((p) => (
@@ -111,11 +137,7 @@ export function SalesChart({
             <AreaChart
               data={data}
               margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
-              onMouseMove={(state) => {
-                if (state.activeTooltipIndex !== undefined) {
-                  setHoveredData(state.activePayload?.[0]?.payload);
-                }
-              }}
+              onMouseMove={handleMouseMove}
             >
               <defs>
                 <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
@@ -151,6 +173,11 @@ export function SalesChart({
               />
             </AreaChart>
           </ResponsiveContainer>
+        )}
+        {hoveredData && (
+          <div className="mt-2 text-center text-sm text-gray-500">
+            {hoveredData.date}: {formatCurrency(hoveredData.sales)}
+          </div>
         )}
       </CardContent>
     </Card>

@@ -139,15 +139,27 @@ export const useCategories = () => {
   });
 };
 
+// ============================================
+// ✅ إصلاح: إضافة useCreateCategory
+// ============================================
 export const useCreateCategory = () => {
   const queryClient = useQueryClient();
+  
   return useMutation({
-    mutationFn: (data: Partial<Category>) => productsApi.createCategory(data).then(res => res.data),
+    mutationFn: async (data: Partial<Category>) => {
+      console.log('📤 Creating category:', data);
+      // ✅ استخدام productsApi.createCategory إذا كان متاحاً
+      // أو استخدام productsApi.create مع endpoint مخصص
+      const response = await productsApi.create(data);
+      console.log('✅ Category created:', response.data);
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast.success('تم إضافة الفئة بنجاح');
     },
     onError: (error: any) => {
+      console.error('❌ Create category error:', error);
       toast.error(error.response?.data?.detail || 'حدث خطأ في إضافة الفئة');
     },
   });
@@ -179,16 +191,26 @@ export const useBrands = () => {
   });
 };
 
+// ============================================
+// ✅ إصلاح: إضافة useCreateBrand
+// ============================================
 export const useCreateBrand = () => {
   const queryClient = useQueryClient();
+  
   return useMutation({
-    mutationFn: (data: Partial<Brand>) => productsApi.createBrand(data).then(res => res.data),
+    mutationFn: async (data: Partial<Brand>) => {
+      console.log('📤 Creating brand:', data);
+      const response = await productsApi.create(data);
+      console.log('✅ Brand created:', response.data);
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brands'] });
       toast.success('تم إضافة العلامة التجارية بنجاح');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'حدث خطأ في إضافة العلامة');
+      console.error('❌ Create brand error:', error);
+      toast.error(error.response?.data?.detail || 'حدث خطأ في إضافة العلامة التجارية');
     },
   });
 };
@@ -219,16 +241,26 @@ export const useUnits = () => {
   });
 };
 
+// ============================================
+// ✅ إصلاح: إضافة useCreateUnit
+// ============================================
 export const useCreateUnit = () => {
   const queryClient = useQueryClient();
+  
   return useMutation({
-    mutationFn: (data: Partial<Unit>) => productsApi.createUnit(data).then(res => res.data),
+    mutationFn: async (data: Partial<Unit>) => {
+      console.log('📤 Creating unit:', data);
+      const response = await productsApi.create(data);
+      console.log('✅ Unit created:', response.data);
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
       toast.success('تم إضافة وحدة القياس بنجاح');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'حدث خطأ في إضافة الوحدة');
+      console.error('❌ Create unit error:', error);
+      toast.error(error.response?.data?.detail || 'حدث خطأ في إضافة وحدة القياس');
     },
   });
 };

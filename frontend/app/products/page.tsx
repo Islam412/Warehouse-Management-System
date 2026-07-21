@@ -60,19 +60,59 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
+// ============================================
+// ✅ Types
+// ============================================
+interface Product {
+  id: string;
+  name: string;
+  name_ar?: string;
+  sku: string;
+  category: string;
+  category_name?: string;
+  brand: string;
+  brand_name?: string;
+  unit: string;
+  unit_name?: string;
+  purchase_price: number;
+  selling_price: number;
+  wholesale_price?: number;
+  is_active: boolean;
+  is_featured: boolean;
+  has_stock: boolean;
+  description?: string;
+  size?: string;
+  color?: string;
+  weight?: number;
+  profit_margin?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ============================================
+// ✅ Helper Functions
+// ============================================
+const toNumber = (value: any): number => {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return parseFloat(value) || 0;
+  return 0;
+};
+
 export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<any>(null);
-  const [productToEdit, setProductToEdit] = useState<any>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editKey, setEditKey] = useState(0);
 
   const { data: productsData, isLoading, error, refetch } = useProducts({ search });
   const deleteProduct = useDeleteProduct();
 
-  const products = Array.isArray(productsData) ? productsData : 
+  // ✅ تأكد من أن products هي مصفوفة
+  const products: Product[] = Array.isArray(productsData) ? productsData : 
                      productsData?.results ? productsData.results : [];
 
   // ============================================
@@ -80,15 +120,19 @@ export default function ProductsPage() {
   // ============================================
   
   // 1. المنتجات الأكثر مبيعاً (حسب السعر الأعلى)
-  const mostSold = [...products].sort((a, b) => (b.selling_price || 0) - (a.selling_price || 0)).slice(0, 5);
+  const mostSold = [...products]
+    .sort((a: Product, b: Product) => (b.selling_price || 0) - (a.selling_price || 0))
+    .slice(0, 5);
   
   // 2. المنتجات الأقل مبيعاً (حسب السعر الأقل)
-  const leastSold = [...products].sort((a, b) => (a.selling_price || 0) - (b.selling_price || 0)).slice(0, 5);
+  const leastSold = [...products]
+    .sort((a: Product, b: Product) => (a.selling_price || 0) - (b.selling_price || 0))
+    .slice(0, 5);
   
   // 3. المنتجات الأكثر ربحية (هامش ربح أعلى)
   const mostProfitable = [...products]
-    .filter(p => p.purchase_price > 0)
-    .sort((a, b) => {
+    .filter((p: Product) => p.purchase_price > 0)
+    .sort((a: Product, b: Product) => {
       const marginA = ((a.selling_price - a.purchase_price) / a.purchase_price) * 100;
       const marginB = ((b.selling_price - b.purchase_price) / b.purchase_price) * 100;
       return marginB - marginA;
@@ -96,13 +140,13 @@ export default function ProductsPage() {
     .slice(0, 5);
   
   // 4. المنتجات منخفضة المخزون
-  const lowStockProducts = products.filter(p => p.has_stock === false || p.is_active === false).slice(0, 5);
+  const lowStockProducts = products.filter((p: Product) => p.has_stock === false || p.is_active === false).slice(0, 5);
   
   // 5. إحصائيات عامة
   const totalProducts = products.length;
-  const activeProducts = products.filter(p => p.is_active).length;
-  const featuredProducts = products.filter(p => p.is_featured).length;
-  const outOfStock = products.filter(p => !p.has_stock).length;
+  const activeProducts = products.filter((p: Product) => p.is_active).length;
+  const featuredProducts = products.filter((p: Product) => p.is_featured).length;
+  const outOfStock = products.filter((p: Product) => !p.has_stock).length;
 
   const handleDelete = async () => {
     if (!productToDelete) return;
@@ -112,12 +156,12 @@ export default function ProductsPage() {
     refetch();
   };
 
-  const openDeleteDialog = (product: any) => {
+  const openDeleteDialog = (product: Product) => {
     setProductToDelete(product);
     setDeleteDialogOpen(true);
   };
 
-  const openEditDialog = (product: any) => {
+  const openEditDialog = (product: Product) => {
     setProductToEdit(product);
     setEditKey(prev => prev + 1);
     setIsEditDialogOpen(true);
@@ -250,7 +294,7 @@ export default function ProductsPage() {
               <p className="text-center text-gray-500 py-4">لا توجد منتجات</p>
             ) : (
               <div className="space-y-3">
-                {mostSold.map((product, index) => (
+                {mostSold.map((product: Product, index: number) => (
                   <div key={product.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors">
                     <div className="flex items-center gap-3">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
@@ -290,7 +334,7 @@ export default function ProductsPage() {
               <p className="text-center text-gray-500 py-4">لا توجد منتجات</p>
             ) : (
               <div className="space-y-3">
-                {leastSold.map((product, index) => (
+                {leastSold.map((product: Product, index: number) => (
                   <div key={product.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors">
                     <div className="flex items-center gap-3">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
@@ -331,7 +375,7 @@ export default function ProductsPage() {
             <p className="text-center text-gray-500 py-4">لا توجد منتجات</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {mostProfitable.map((product, index) => {
+              {mostProfitable.map((product: Product, index: number) => {
                 const margin = ((product.selling_price - product.purchase_price) / product.purchase_price * 100);
                 return (
                   <div key={product.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
@@ -401,7 +445,7 @@ export default function ProductsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                products.map((product: any, index: number) => (
+                products.map((product: Product, index: number) => (
                   <motion.tr
                     key={product.id || index}
                     initial={{ opacity: 0, y: 10 }}
@@ -421,7 +465,7 @@ export default function ProductsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Link href={`/product/${product.id}`}>
+                        <Link href={`/products/${product.id}`}>
                           <Button variant="ghost" size="icon" className="text-blue-500" title="عرض التفاصيل">
                             <Eye className="w-4 h-4" />
                           </Button>

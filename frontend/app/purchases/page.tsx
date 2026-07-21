@@ -96,6 +96,66 @@ import {
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'];
 
+// ============================================
+// ✅ Types
+// ============================================
+interface PurchaseItem {
+  id: string;
+  product: string;
+  product_name: string;
+  product_sku: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  discount: number;
+  tax: number;
+  received_quantity: number;
+  remaining_quantity: number;
+}
+
+interface PurchaseOrder {
+  id: string;
+  order_number: string;
+  supplier: string;
+  supplier_name: string;
+  supplier_phone: string;
+  warehouse: string;
+  warehouse_name: string;
+  order_date: string;
+  expected_date: string;
+  received_date?: string;
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  status: 'draft' | 'ordered' | 'received' | 'cancelled';
+  status_display: string;
+  notes?: string;
+  items: PurchaseItem[];
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+  name_ar?: string;
+  phone: string;
+  is_active: boolean;
+}
+
+// ============================================
+// ✅ Helper Functions
+// ============================================
+const toNumber = (value: any): number => {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return parseFloat(value) || 0;
+  return 0;
+};
+
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-500',
   ordered: 'bg-blue-500',
@@ -110,29 +170,22 @@ const statusLabels: Record<string, string> = {
   cancelled: 'ملغي',
 };
 
-// دالة مساعدة
-const toNumber = (value: any): number => {
-  if (value === null || value === undefined) return 0;
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') return parseFloat(value) || 0;
-  return 0;
-};
-
 export default function PurchasesPage() {
   const [search, setSearch] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [purchaseToDelete, setPurchaseToDelete] = useState<any>(null);
+  const [purchaseToDelete, setPurchaseToDelete] = useState<PurchaseOrder | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   const { data: purchasesData, isLoading, error, refetch } = usePurchases({ search });
   const { data: suppliersData } = useSuppliers();
   const deletePurchase = useDeletePurchase();
 
-  const purchases = Array.isArray(purchasesData) ? purchasesData : 
+  // ✅ تأكد من أن البيانات مصفوفات
+  const purchases: PurchaseOrder[] = Array.isArray(purchasesData) ? purchasesData : 
                     purchasesData?.results ? purchasesData.results : [];
   
-  const suppliers = Array.isArray(suppliersData) ? suppliersData : [];
+  const suppliers: Supplier[] = Array.isArray(suppliersData) ? suppliersData : [];
 
   // ============================================
   // 📊 تحليلات المشتريات
@@ -140,16 +193,16 @@ export default function PurchasesPage() {
 
   // 1. إحصائيات عامة
   const totalOrders = purchases.length;
-  const totalAmount = purchases.reduce((sum, p) => sum + toNumber(p.total), 0);
-  const receivedOrders = purchases.filter(p => p.status === 'received').length;
-  const pendingOrders = purchases.filter(p => p.status === 'ordered' || p.status === 'draft').length;
+  const totalAmount = purchases.reduce((sum: number, p: PurchaseOrder) => sum + toNumber(p.total), 0);
+  const receivedOrders = purchases.filter((p: PurchaseOrder) => p.status === 'received').length;
+  const pendingOrders = purchases.filter((p: PurchaseOrder) => p.status === 'ordered' || p.status === 'draft').length;
 
   // 2. توزيع الحالات
   const statusDistribution = useMemo(() => {
     const statuses = ['draft', 'ordered', 'received', 'cancelled'];
-    return statuses.map(status => ({
+    return statuses.map((status: string) => ({
       name: statusLabels[status] || status,
-      value: purchases.filter(p => p.status === status).length,
+      value: purchases.filter((p: PurchaseOrder) => p.status === status).length,
       status,
     }));
   }, [purchases]);
@@ -158,7 +211,7 @@ export default function PurchasesPage() {
   const topSuppliers = useMemo(() => {
     const supplierData: Record<string, { name: string; total: number; count: number }> = {};
     
-    purchases.forEach(p => {
+    purchases.forEach((p: PurchaseOrder) => {
       const supplierId = p.supplier;
       const supplierName = p.supplier_name || 'غير معروف';
       if (!supplierData[supplierId]) {
@@ -185,7 +238,7 @@ export default function PurchasesPage() {
       data[key] = 0;
     }
     
-    purchases.forEach(p => {
+    purchases.forEach((p: PurchaseOrder) => {
       if (p.order_date) {
         const date = new Date(p.order_date);
         const key = `${months[date.getMonth()]} ${date.getFullYear()}`;
@@ -210,7 +263,7 @@ export default function PurchasesPage() {
       data[key] = 0;
     }
     
-    purchases.forEach(p => {
+    purchases.forEach((p: PurchaseOrder) => {
       if (p.order_date) {
         const date = new Date(p.order_date).toISOString().split('T')[0];
         if (data[date] !== undefined) {
@@ -228,7 +281,7 @@ export default function PurchasesPage() {
   // 6. الطلبات المستلمة متأخرة
   const overdueOrders = useMemo(() => {
     const now = new Date();
-    return purchases.filter(p => {
+    return purchases.filter((p: PurchaseOrder) => {
       if (!p.expected_date) return false;
       const expectedDate = new Date(p.expected_date);
       return expectedDate < now && p.status !== 'received' && p.status !== 'cancelled';
@@ -243,7 +296,7 @@ export default function PurchasesPage() {
     refetch();
   };
 
-  const openDeleteDialog = (purchase: any) => {
+  const openDeleteDialog = (purchase: PurchaseOrder) => {
     setPurchaseToDelete(purchase);
     setDeleteDialogOpen(true);
   };
@@ -394,7 +447,7 @@ export default function PurchasesPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[250px]">
-                  {dailyPurchases.length > 0 && dailyPurchases.some(d => d.purchases > 0) ? (
+                  {dailyPurchases.length > 0 && dailyPurchases.some((d) => d.purchases > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={dailyPurchases}>
                         <defs>
@@ -430,7 +483,7 @@ export default function PurchasesPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[250px]">
-                  {monthlyPurchases.length > 0 && monthlyPurchases.some(m => m.value > 0) ? (
+                  {monthlyPurchases.length > 0 && monthlyPurchases.some((m) => m.value > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={monthlyPurchases}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -466,7 +519,7 @@ export default function PurchasesPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="h-[200px]">
-                  {statusDistribution.some(s => s.value > 0) ? (
+                  {statusDistribution.some((s) => s.value > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -477,7 +530,10 @@ export default function PurchasesPage() {
                           outerRadius={80}
                           paddingAngle={3}
                           dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => {
+                            const safePercent = percent ?? 0;
+                            return `${name} ${(safePercent * 100).toFixed(0)}%`;
+                          }}
                         >
                           {statusDistribution.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -521,7 +577,7 @@ export default function PurchasesPage() {
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
-                {dailyPurchases.length > 0 && dailyPurchases.some(d => d.purchases > 0) ? (
+                {dailyPurchases.length > 0 && dailyPurchases.some((d) => d.purchases > 0) ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={dailyPurchases}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -608,7 +664,7 @@ export default function PurchasesPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
-                  {statusDistribution.some(s => s.value > 0) ? (
+                  {statusDistribution.some((s) => s.value > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -619,7 +675,10 @@ export default function PurchasesPage() {
                           outerRadius={100}
                           paddingAngle={3}
                           dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => {
+                            const safePercent = percent ?? 0;
+                            return `${name} ${(safePercent * 100).toFixed(0)}%`;
+                          }}
                         >
                           {statusDistribution.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -649,8 +708,8 @@ export default function PurchasesPage() {
               <CardContent>
                 <div className="space-y-3">
                   {statusDistribution.map((item, index) => {
-                    const statusOrders = purchases.filter(p => p.status === item.status);
-                    const total = statusOrders.reduce((sum, p) => sum + toNumber(p.total), 0);
+                    const statusOrders = purchases.filter((p: PurchaseOrder) => p.status === item.status);
+                    const total = statusOrders.reduce((sum: number, p: PurchaseOrder) => sum + toNumber(p.total), 0);
                     
                     return (
                       <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
@@ -691,7 +750,7 @@ export default function PurchasesPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {overdueOrders.map((order) => {
+                  {overdueOrders.map((order: PurchaseOrder) => {
                     const daysOverdue = Math.floor(
                       (new Date().getTime() - new Date(order.expected_date).getTime()) / 
                       (1000 * 60 * 60 * 24)
@@ -768,8 +827,10 @@ export default function PurchasesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                purchases.map((purchase: any, index: number) => {
+                purchases.map((purchase: PurchaseOrder, index: number) => {
                   const total = toNumber(purchase.total);
+                  // ✅ إصلاح: استخدام supplier_name مباشرة أو قيمة افتراضية
+                  const supplierName = purchase.supplier_name || 'غير معروف';
                   
                   return (
                     <motion.tr
@@ -780,7 +841,7 @@ export default function PurchasesPage() {
                       className="border-b"
                     >
                       <TableCell className="font-medium">{purchase.order_number || '-'}</TableCell>
-                      <TableCell>{purchase.supplier_name || purchase.supplier?.name || '-'}</TableCell>
+                      <TableCell>{supplierName}</TableCell>
                       <TableCell>{purchase.order_date ? new Date(purchase.order_date).toLocaleDateString('ar-EG') : '-'}</TableCell>
                       <TableCell className="font-bold text-purple-600">{total.toFixed(2)} ج.م</TableCell>
                       <TableCell>

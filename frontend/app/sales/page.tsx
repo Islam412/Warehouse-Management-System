@@ -1,4 +1,3 @@
-// frontend/app/sales/page.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -128,7 +127,48 @@ const statusLabels: Record<string, string> = {
 };
 
 // ============================================
-// ✅ دالة مساعدة لتحويل الأرقام - تعريفها أولاً
+// ✅ Types
+// ============================================
+interface InvoiceItem {
+  id: string;
+  product: string;
+  product_name: string;
+  product_sku: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  discount: number;
+  tax: number;
+  category_name?: string;
+}
+
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  customer: string;
+  customer_name: string;
+  customer_phone: string;
+  date: string;
+  due_date: string;
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  paid_amount: number;
+  remaining_amount: number;
+  status: 'draft' | 'confirmed' | 'paid' | 'partially_paid' | 'cancelled';
+  status_display: string;
+  is_overdue: boolean;
+  notes?: string;
+  items: InvoiceItem[];
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
+// ✅ Helper Functions
 // ============================================
 const toNumber = (value: any): number => {
   if (value === null || value === undefined) return 0;
@@ -141,7 +181,7 @@ export default function SalesPage() {
   const [search, setSearch] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [invoiceToDelete, setInvoiceToDelete] = useState<any>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   const { data: invoicesData, isLoading, error, refetch } = useInvoices({ search });
@@ -149,11 +189,11 @@ export default function SalesPage() {
   const { data: productsData } = useProducts();
   const deleteInvoice = useDeleteInvoice();
 
-  const invoices = Array.isArray(invoicesData) ? invoicesData : 
+  // ✅ تأكد من أن البيانات مصفوفات
+  const invoices: Invoice[] = Array.isArray(invoicesData) ? invoicesData : 
                     invoicesData?.results ? invoicesData.results : [];
   
   const customers = Array.isArray(customersData) ? customersData : [];
-  const products = Array.isArray(productsData) ? productsData : [];
 
   // ============================================
   // 📊 تحليلات المبيعات
@@ -161,16 +201,16 @@ export default function SalesPage() {
 
   // 1. إحصائيات عامة
   const totalInvoices = invoices.length;
-  const totalAmount = invoices.reduce((sum, inv) => sum + toNumber(inv.total), 0);
-  const totalPaid = invoices.reduce((sum, inv) => sum + toNumber(inv.paid_amount), 0);
+  const totalAmount = invoices.reduce((sum: number, inv: Invoice) => sum + toNumber(inv.total), 0);
+  const totalPaid = invoices.reduce((sum: number, inv: Invoice) => sum + toNumber(inv.paid_amount), 0);
   const totalRemaining = totalAmount - totalPaid;
 
   // 2. الفواتير حسب الحالة
   const statusDistribution = useMemo(() => {
     const statuses = ['draft', 'confirmed', 'paid', 'partially_paid', 'cancelled'];
-    return statuses.map(status => ({
+    return statuses.map((status: string) => ({
       name: statusLabels[status] || status,
-      value: invoices.filter(inv => inv.status === status).length,
+      value: invoices.filter((inv: Invoice) => inv.status === status).length,
       status,
     }));
   }, [invoices]);
@@ -187,7 +227,7 @@ export default function SalesPage() {
       data[key] = 0;
     }
     
-    invoices.forEach(inv => {
+    invoices.forEach((inv: Invoice) => {
       if (inv.date) {
         const date = new Date(inv.date).toISOString().split('T')[0];
         if (data[date] !== undefined) {
@@ -206,7 +246,7 @@ export default function SalesPage() {
   const topCustomers = useMemo(() => {
     const customerSales: Record<string, { name: string; total: number; count: number }> = {};
     
-    invoices.forEach(inv => {
+    invoices.forEach((inv: Invoice) => {
       const customerId = inv.customer;
       const customerName = inv.customer_name || 'غير معروف';
       if (!customerSales[customerId]) {
@@ -225,9 +265,9 @@ export default function SalesPage() {
   const topProducts = useMemo(() => {
     const productSales: Record<string, { name: string; quantity: number; total: number }> = {};
     
-    invoices.forEach(inv => {
+    invoices.forEach((inv: Invoice) => {
       if (inv.items) {
-        inv.items.forEach((item: any) => {
+        inv.items.forEach((item: InvoiceItem) => {
           const productId = item.product;
           const productName = item.product_name || 'غير معروف';
           if (!productSales[productId]) {
@@ -248,9 +288,9 @@ export default function SalesPage() {
   const leastProducts = useMemo(() => {
     const productSales: Record<string, { name: string; quantity: number; total: number }> = {};
     
-    invoices.forEach(inv => {
+    invoices.forEach((inv: Invoice) => {
       if (inv.items) {
-        inv.items.forEach((item: any) => {
+        inv.items.forEach((item: InvoiceItem) => {
           const productId = item.product;
           const productName = item.product_name || 'غير معروف';
           if (!productSales[productId]) {
@@ -263,7 +303,7 @@ export default function SalesPage() {
     });
     
     return Object.values(productSales)
-      .filter(p => p.quantity > 0)
+      .filter((p) => p.quantity > 0)
       .sort((a, b) => a.quantity - b.quantity)
       .slice(0, 10);
   }, [invoices]);
@@ -280,7 +320,7 @@ export default function SalesPage() {
       data[key] = 0;
     }
     
-    invoices.forEach(inv => {
+    invoices.forEach((inv: Invoice) => {
       if (inv.date) {
         const date = new Date(inv.date);
         const key = `${months[date.getMonth()]} ${date.getFullYear()}`;
@@ -297,9 +337,9 @@ export default function SalesPage() {
   const salesByCategory = useMemo(() => {
     const categorySales: Record<string, number> = {};
     
-    invoices.forEach(inv => {
+    invoices.forEach((inv: Invoice) => {
       if (inv.items) {
-        inv.items.forEach((item: any) => {
+        inv.items.forEach((item: InvoiceItem) => {
           const category = item.category_name || 'غير مصنف';
           categorySales[category] = (categorySales[category] || 0) + toNumber(item.total);
         });
@@ -321,7 +361,7 @@ export default function SalesPage() {
     let currentMonthTotal = 0;
     let lastMonthTotal = 0;
     
-    invoices.forEach(inv => {
+    invoices.forEach((inv: Invoice) => {
       if (inv.date) {
         const date = new Date(inv.date);
         if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
@@ -341,7 +381,7 @@ export default function SalesPage() {
   // 10. الفواتير المتأخرة
   const overdueInvoices = useMemo(() => {
     const now = new Date();
-    return invoices.filter(inv => {
+    return invoices.filter((inv: Invoice) => {
       if (!inv.due_date) return false;
       const dueDate = new Date(inv.due_date);
       return dueDate < now && inv.status !== 'paid' && inv.status !== 'cancelled';
@@ -351,14 +391,6 @@ export default function SalesPage() {
   // 11. متوسط قيمة الفاتورة
   const avgInvoiceValue = totalInvoices > 0 ? totalAmount / totalInvoices : 0;
 
-  // 12. أعلى فاتورة
-  const highestInvoice = useMemo(() => {
-    return invoices.reduce((max, inv) => {
-      const total = toNumber(inv.total);
-      return total > toNumber(max.total) ? inv : max;
-    }, invoices[0] || { total: 0 });
-  }, [invoices]);
-
   const handleDelete = async () => {
     if (!invoiceToDelete) return;
     await deleteInvoice.mutateAsync(invoiceToDelete.id);
@@ -367,7 +399,7 @@ export default function SalesPage() {
     refetch();
   };
 
-  const openDeleteDialog = (invoice: any) => {
+  const openDeleteDialog = (invoice: Invoice) => {
     setInvoiceToDelete(invoice);
     setDeleteDialogOpen(true);
   };
@@ -624,7 +656,10 @@ export default function SalesPage() {
                         outerRadius={80}
                         paddingAngle={3}
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => {
+                          const safePercent = percent ?? 0;
+                          return `${name} ${(safePercent * 100).toFixed(0)}%`;
+                        }}
                       >
                         {statusDistribution.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -872,7 +907,10 @@ export default function SalesPage() {
                         outerRadius={100}
                         paddingAngle={3}
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => {
+                          const safePercent = percent ?? 0;
+                          return `${name} ${(safePercent * 100).toFixed(0)}%`;
+                        }}
                       >
                         {statusDistribution.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -898,8 +936,8 @@ export default function SalesPage() {
               <CardContent>
                 <div className="space-y-3">
                   {statusDistribution.map((item, index) => {
-                    const statusInvoices = invoices.filter(inv => inv.status === item.status);
-                    const total = statusInvoices.reduce((sum, inv) => sum + toNumber(inv.total), 0);
+                    const statusInvoices = invoices.filter((inv: Invoice) => inv.status === item.status);
+                    const total = statusInvoices.reduce((sum: number, inv: Invoice) => sum + toNumber(inv.total), 0);
                     
                     return (
                       <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
@@ -943,7 +981,7 @@ export default function SalesPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {overdueInvoices.map((invoice) => {
+                  {overdueInvoices.map((invoice: Invoice) => {
                     const daysOverdue = Math.floor(
                       (new Date().getTime() - new Date(invoice.due_date).getTime()) / 
                       (1000 * 60 * 60 * 24)
@@ -1024,11 +1062,14 @@ export default function SalesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                invoices.map((invoice: any, index: number) => {
+                invoices.map((invoice: Invoice, index: number) => {
                   const total = toNumber(invoice.total);
                   const paid = toNumber(invoice.paid_amount);
                   const remaining = total - paid;
                   const isOverdue = invoice.due_date && new Date(invoice.due_date) < new Date() && invoice.status !== 'paid';
+                  
+                  // ✅ استخدام customer_name مباشرة
+                  const customerName = invoice.customer_name || 'غير معروف';
                   
                   return (
                     <motion.tr
@@ -1044,7 +1085,7 @@ export default function SalesPage() {
                           {isOverdue && <Clock className="w-4 h-4 text-red-500" />}
                         </div>
                       </TableCell>
-                      <TableCell>{invoice.customer_name || invoice.customer?.name || '-'}</TableCell>
+                      <TableCell>{customerName}</TableCell>
                       <TableCell>{invoice.date ? new Date(invoice.date).toLocaleDateString('ar-EG') : '-'}</TableCell>
                       <TableCell className="font-bold">{total.toFixed(2)} ج.م</TableCell>
                       <TableCell className="text-green-600">{paid.toFixed(2)} ج.م</TableCell>

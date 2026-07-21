@@ -99,7 +99,67 @@ import {
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'];
 
-// دالة مساعدة
+// ============================================
+// ✅ Types
+// ============================================
+interface Stock {
+  id: string;
+  product: string;
+  product_name: string;
+  product_sku: string;
+  warehouse: string;
+  warehouse_name: string;
+  quantity: number;
+  min_quantity: number;
+  max_quantity: number;
+  reserved_quantity: number;
+  available_quantity: number;
+  is_low_stock: boolean;
+  is_over_stock: boolean;
+  last_updated: string;
+  updated_by: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  name_ar?: string;
+  sku: string;
+  category_name?: string;
+  brand_name?: string;
+  unit_name?: string;
+  purchase_price: number;
+  selling_price: number;
+  wholesale_price?: number;
+  is_active: boolean;
+  size?: string;
+  color?: string;
+  weight?: number;
+}
+
+interface Movement {
+  id: string;
+  product: string;
+  product_name: string;
+  warehouse: string;
+  warehouse_name: string;
+  movement_type: string;
+  quantity: number;
+  previous_quantity: number;
+  new_quantity: number;
+  created_at: string;
+  notes?: string;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+// ============================================
+// ✅ Helper Functions
+// ============================================
 const toNumber = (value: any): number => {
   if (value === null || value === undefined) return 0;
   if (typeof value === 'number') return value;
@@ -118,13 +178,14 @@ export default function InventoryPage() {
   const { data: movementsData } = useStockMovements();
   const { data: suppliersData } = useSuppliers();
 
-  const stocks = Array.isArray(stocksData) ? stocksData : 
+  // ✅ تأكد من أن البيانات مصفوفات
+  const stocks: Stock[] = Array.isArray(stocksData) ? stocksData : 
                   stocksData?.results ? stocksData.results : [];
   
-  const products = Array.isArray(productsData) ? productsData : [];
+  const products: Product[] = Array.isArray(productsData) ? productsData : [];
   const warehouses = Array.isArray(warehousesData) ? warehousesData : [];
-  const movements = Array.isArray(movementsData) ? movementsData : [];
-  const suppliers = Array.isArray(suppliersData) ? suppliersData : [];
+  const movements: Movement[] = Array.isArray(movementsData) ? movementsData : [];
+  const suppliers: Supplier[] = Array.isArray(suppliersData) ? suppliersData : [];
 
   // ============================================
   // 📊 تحليلات المخزون الأساسية
@@ -132,24 +193,24 @@ export default function InventoryPage() {
 
   // 1. المواد المتاحة
   const availableItems = useMemo(() => {
-    return stocks.filter(s => s.quantity > s.min_quantity && s.quantity > 0);
+    return stocks.filter((s: Stock) => s.quantity > s.min_quantity && s.quantity > 0);
   }, [stocks]);
 
   // 2. المواد التي نفدت
   const outOfStockItems = useMemo(() => {
-    return stocks.filter(s => s.quantity === 0);
+    return stocks.filter((s: Stock) => s.quantity === 0);
   }, [stocks]);
 
   // 3. المواد التي أوشكت على النفاذ
   const nearOutOfStockItems = useMemo(() => {
-    return stocks.filter(s => s.quantity <= s.min_quantity && s.quantity > 0);
+    return stocks.filter((s: Stock) => s.quantity <= s.min_quantity && s.quantity > 0);
   }, [stocks]);
 
   // 4. المنتجات حسب الحجم/المقاس
   const productsBySize = useMemo(() => {
-    const grouped: Record<string, any[]> = {};
+    const grouped: Record<string, Product[]> = {};
     
-    products.forEach(p => {
+    products.forEach((p: Product) => {
       const size = p.size || 'غير محدد';
       if (!grouped[size]) {
         grouped[size] = [];
@@ -168,14 +229,14 @@ export default function InventoryPage() {
 
   // 5. المنتجات الناقصة
   const missingProducts = useMemo(() => {
-    const stockProductIds = new Set(stocks.map(s => s.product));
-    return products.filter(p => !stockProductIds.has(p.id) && p.is_active);
+    const stockProductIds = new Set(stocks.map((s: Stock) => s.product));
+    return products.filter((p: Product) => !stockProductIds.has(p.id) && p.is_active);
   }, [products, stocks]);
 
   // 6. قيمة المخزون الإجمالية
   const totalStockValue = useMemo(() => {
-    return stocks.reduce((sum, s) => {
-      const product = products.find(p => p.id === s.product);
+    return stocks.reduce((sum: number, s: Stock) => {
+      const product = products.find((p: Product) => p.id === s.product);
       return sum + (s.quantity * (product?.purchase_price || 0));
     }, 0);
   }, [stocks, products]);
@@ -184,8 +245,8 @@ export default function InventoryPage() {
   const stockByCategory = useMemo(() => {
     const categoryData: Record<string, { quantity: number; value: number }> = {};
     
-    stocks.forEach(s => {
-      const product = products.find(p => p.id === s.product);
+    stocks.forEach((s: Stock) => {
+      const product = products.find((p: Product) => p.id === s.product);
       if (product) {
         const category = product.category_name || 'غير مصنف';
         if (!categoryData[category]) {
@@ -205,8 +266,8 @@ export default function InventoryPage() {
   const stockByBrand = useMemo(() => {
     const brandData: Record<string, { quantity: number; value: number }> = {};
     
-    stocks.forEach(s => {
-      const product = products.find(p => p.id === s.product);
+    stocks.forEach((s: Stock) => {
+      const product = products.find((p: Product) => p.id === s.product);
       if (product) {
         const brand = product.brand_name || 'غير مصنف';
         if (!brandData[brand]) {
@@ -230,7 +291,7 @@ export default function InventoryPage() {
   const mostActiveProducts = useMemo(() => {
     const movementCount: Record<string, { product_id: string; name: string; total: number; ins: number; outs: number }> = {};
     
-    movements.forEach(m => {
+    movements.forEach((m: Movement) => {
       const productId = m.product;
       const productName = m.product_name || 'غير معروف';
       if (!movementCount[productId]) {
@@ -253,7 +314,7 @@ export default function InventoryPage() {
   const leastActiveProducts = useMemo(() => {
     const movementCount: Record<string, { product_id: string; name: string; total: number }> = {};
     
-    movements.forEach(m => {
+    movements.forEach((m: Movement) => {
       const productId = m.product;
       const productName = m.product_name || 'غير معروف';
       if (!movementCount[productId]) {
@@ -263,7 +324,7 @@ export default function InventoryPage() {
     });
     
     return Object.values(movementCount)
-      .filter(p => p.total > 0)
+      .filter((p) => p.total > 0)
       .sort((a, b) => a.total - b.total)
       .slice(0, 10);
   }, [movements]);
@@ -280,7 +341,7 @@ export default function InventoryPage() {
       data[key] = { ins: 0, outs: 0 };
     }
     
-    movements.forEach(m => {
+    movements.forEach((m: Movement) => {
       if (m.created_at) {
         const date = new Date(m.created_at).toISOString().split('T')[0];
         if (data[date]) {
@@ -301,19 +362,19 @@ export default function InventoryPage() {
 
   // 12. معدل دوران المخزون
   const turnoverRate = useMemo(() => {
-    const totalOut = movements.reduce((sum, m) => {
+    const totalOut = movements.reduce((sum: number, m: Movement) => {
       return sum + (toNumber(m.quantity) < 0 ? Math.abs(toNumber(m.quantity)) : 0);
     }, 0);
-    const averageStock = stocks.reduce((sum, s) => sum + s.quantity, 0) / (stocks.length || 1);
+    const averageStock = stocks.reduce((sum: number, s: Stock) => sum + s.quantity, 0) / (stocks.length || 1);
     return averageStock > 0 ? totalOut / averageStock : 0;
   }, [movements, stocks]);
 
   // 13. أيام تغطية المخزون
   const daysOfCoverage = useMemo(() => {
-    const dailySales = movements.reduce((sum, m) => {
+    const dailySales = movements.reduce((sum: number, m: Movement) => {
       return sum + (toNumber(m.quantity) < 0 ? Math.abs(toNumber(m.quantity)) : 0);
     }, 0) / 30;
-    const totalStock = stocks.reduce((sum, s) => sum + s.quantity, 0);
+    const totalStock = stocks.reduce((sum: number, s: Stock) => sum + s.quantity, 0);
     return dailySales > 0 ? totalStock / dailySales : 0;
   }, [movements, stocks]);
 
@@ -323,10 +384,10 @@ export default function InventoryPage() {
 
   const mostProfitableProducts = useMemo(() => {
     return products
-      .filter(p => p.purchase_price > 0)
-      .map(p => {
+      .filter((p: Product) => p.purchase_price > 0)
+      .map((p: Product) => {
         const margin = ((p.selling_price - p.purchase_price) / p.purchase_price) * 100;
-        const stock = stocks.find(s => s.product === p.id);
+        const stock = stocks.find((s: Stock) => s.product === p.id);
         return {
           ...p,
           margin,
@@ -343,7 +404,7 @@ export default function InventoryPage() {
 
   const productsByColor = useMemo(() => {
     const colors: Record<string, number> = {};
-    products.forEach(p => {
+    products.forEach((p: Product) => {
       if (p.color) {
         const color = p.color;
         colors[color] = (colors[color] || 0) + 1;
@@ -360,7 +421,7 @@ export default function InventoryPage() {
 
   const productsByWeight = useMemo(() => {
     const weights: Record<string, number> = {};
-    products.forEach(p => {
+    products.forEach((p: Product) => {
       if (p.weight) {
         const weight = p.weight < 1 ? 'أقل من 1 كجم' : p.weight < 5 ? '1-5 كجم' : p.weight < 10 ? '5-10 كجم' : 'أكثر من 10 كجم';
         weights[weight] = (weights[weight] || 0) + 1;
@@ -384,7 +445,7 @@ export default function InventoryPage() {
       'أكثر من 500': 0,
     };
     
-    products.forEach(p => {
+    products.forEach((p: Product) => {
       const price = p.selling_price;
       if (price < 50) ranges['أقل من 50']++;
       else if (price < 100) ranges['50-100']++;
@@ -405,13 +466,12 @@ export default function InventoryPage() {
   const stockBySupplier = useMemo(() => {
     const supplierData: Record<string, { name: string; value: number; count: number }> = {};
     
-    products.forEach(p => {
-      // محاكاة: ربط المنتجات بالموردين (في الواقع يوجد علاقة)
+    products.forEach((p: Product) => {
       const supplierName = p.brand_name || 'غير معروف';
       if (!supplierData[supplierName]) {
         supplierData[supplierName] = { name: supplierName, value: 0, count: 0 };
       }
-      const stock = stocks.find(s => s.product === p.id);
+      const stock = stocks.find((s: Stock) => s.product === p.id);
       if (stock) {
         supplierData[supplierName].value += stock.quantity * (p.purchase_price || 0);
         supplierData[supplierName].count += 1;
@@ -430,9 +490,9 @@ export default function InventoryPage() {
   const stockForecast = useMemo(() => {
     const now = new Date();
     return stocks
-      .filter(s => s.quantity > 0)
-      .map(s => {
-        const product = products.find(p => p.id === s.product);
+      .filter((s: Stock) => s.quantity > 0)
+      .map((s: Stock) => {
+        const product = products.find((p: Product) => p.id === s.product);
         // محاكاة: حساب متوسط الاستهلاك اليومي
         const dailyConsumption = 0.5 + Math.random() * 2;
         const daysUntilOut = Math.floor(s.quantity / dailyConsumption);
@@ -458,7 +518,7 @@ export default function InventoryPage() {
   // ============================================
 
   const totalItems = stocks.length;
-  const totalQuantity = stocks.reduce((sum, s) => sum + s.quantity, 0);
+  const totalQuantity = stocks.reduce((sum: number, s: Stock) => sum + s.quantity, 0);
   const availableCount = availableItems.length;
   const outOfStockCount = outOfStockItems.length;
   const nearOutOfStockCount = nearOutOfStockItems.length;
@@ -654,7 +714,10 @@ export default function InventoryPage() {
                           outerRadius={90}
                           paddingAngle={3}
                           dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => {
+                            const safePercent = percent ?? 0;
+                            return `${name} ${(safePercent * 100).toFixed(0)}%`;
+                          }}
                         >
                           {stockByCategory.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -771,8 +834,8 @@ export default function InventoryPage() {
                 <p className="text-center text-gray-500 py-4">لا توجد منتجات متاحة</p>
               ) : (
                 <div className="space-y-3">
-                  {availableItems.map((stock) => {
-                    const product = products.find(p => p.id === stock.product);
+                  {availableItems.map((stock: Stock) => {
+                    const product = products.find((p: Product) => p.id === stock.product);
                     return (
                       <div key={stock.id} className="flex items-center justify-between p-3 hover:bg-muted rounded-lg transition-colors border border-green-100 dark:border-green-800/30">
                         <div>
@@ -812,8 +875,8 @@ export default function InventoryPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {nearOutOfStockItems.map((stock) => {
-                    const product = products.find(p => p.id === stock.product);
+                  {nearOutOfStockItems.map((stock: Stock) => {
+                    const product = products.find((p: Product) => p.id === stock.product);
                     return (
                       <div key={stock.id} className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                         <div>
@@ -853,8 +916,8 @@ export default function InventoryPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {outOfStockItems.map((stock) => {
-                    const product = products.find(p => p.id === stock.product);
+                  {outOfStockItems.map((stock: Stock) => {
+                    const product = products.find((p: Product) => p.id === stock.product);
                     return (
                       <div key={stock.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
                         <div>
@@ -1092,8 +1155,8 @@ export default function InventoryPage() {
                       <Badge>{group.count} منتج</Badge>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                      {group.products.map((product) => {
-                        const stock = stocks.find(s => s.product === product.id);
+                      {group.products.map((product: Product) => {
+                        const stock = stocks.find((s: Stock) => s.product === product.id);
                         return (
                           <div key={product.id} className="p-2 bg-muted/50 rounded-lg flex justify-between items-center">
                             <span className="text-sm">{product.name}</span>
@@ -1193,7 +1256,10 @@ export default function InventoryPage() {
                           outerRadius={70}
                           paddingAngle={3}
                           dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => {
+                            const safePercent = percent ?? 0;
+                            return `${name} ${(safePercent * 100).toFixed(0)}%`;
+                          }}
                         >
                           {productsByColor.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -1354,8 +1420,8 @@ export default function InventoryPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                stocks.map((stock) => {
-                  const product = products.find(p => p.id === stock.product);
+                stocks.map((stock: Stock) => {
+                  const product = products.find((p: Product) => p.id === stock.product);
                   const isOut = stock.quantity === 0;
                   const isLow = stock.quantity <= stock.min_quantity && !isOut;
                   const status = isOut ? 'نفد' : isLow ? 'منخفض' : 'متوفر';
