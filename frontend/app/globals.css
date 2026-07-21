@@ -267,3 +267,40 @@
     color: black !important;
   }
 }
+
+
+footer a {
+  transition: all 0.2s ease-in-out;
+}
+
+footer .group:hover .group-hover\:translate-x-1 {
+  transform: translateX(4px);
+}
+
+footer .group:hover .group-hover\:-translate-y-0\.5 {
+  transform: translateY(-2px);
+}
+
+/* تأثير التموج عند الضغط على الزر */
+footer a:active {
+  transform: scale(0.95);
+}
+
+/* تنسيق الروابط الاجتماعية */
+footer .social-icon {
+  position: relative;
+  overflow: hidden;
+}
+
+footer .social-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.1), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+footer .social-icon:hover::after {
+  opacity: 1;
+}
